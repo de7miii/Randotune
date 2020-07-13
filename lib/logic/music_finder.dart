@@ -43,7 +43,7 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
-  set upNext(SongInfo newSong){
+  set upNext(SongInfo newSong) {
     assert(newSong != null);
     _upNext = newSong;
     notifyListeners();
@@ -115,20 +115,13 @@ class MusicFinder with ChangeNotifier {
       getPlayingSongPosition();
       print("Playing: ${song.title}");
     }
-    audioPlayer.onAudioPositionChanged.listen((event) {
-      if ((currentSongDuration - event.inMilliseconds < 10000 && upNext == null) || (upNext == currentlyPlaying && currentSongDuration - event.inMilliseconds < 10000)){
-        // TODO: fix loop when song is finished.
-        upNext = allSongs[Random.secure().nextInt(allSongs.length)];
-        print("Up next: ${upNext.title}");
-      }
-    });
     audioPlayer.onPlayerCompletion.listen((event) {
-        print('song finished');
-        Future.delayed(Duration(seconds: 5));
-        currentSongPosition = 0.0;
-        currentlyPlaying = upNext;
-        notifyListeners();
-        playSong(currentlyPlaying);
+      print('song finished');
+      Future.delayed(Duration(seconds: 5));
+      currentSongPosition = 0.0;
+      currentlyPlaying = upNext;
+      notifyListeners();
+      playSong(currentlyPlaying);
     });
   }
 
@@ -145,11 +138,15 @@ class MusicFinder with ChangeNotifier {
   seek({@required int duration}) async {
     assert(audioPlayer != null);
     assert(duration != null);
-    if (audioPlayer.state == AudioPlayerState.PLAYING) {
+    if (audioPlayer.state == AudioPlayerState.PLAYING ||
+        audioPlayer.state == AudioPlayerState.PAUSED) {
       if (duration == 0) {
         await audioPlayer.seek(Duration(seconds: 0));
+        currentSongPosition = 0.0;
+        notifyListeners();
       } else {
         await audioPlayer.seek(Duration(seconds: duration));
+        notifyListeners();
       }
     }
   }
@@ -160,6 +157,13 @@ class MusicFinder with ChangeNotifier {
       audioPlayer.onAudioPositionChanged.listen((event) {
         currentSongPosition = event.inMilliseconds.toDouble();
         notifyListeners();
+        if ((currentSongDuration - event.inMilliseconds < 10000 &&
+                upNext == null) ||
+            (upNext == currentlyPlaying &&
+                currentSongDuration - event.inMilliseconds < 10000)) {
+          upNext = allSongs[Random.secure().nextInt(allSongs.length)];
+          print("Up next: ${upNext.title}");
+        }
       });
     }
   }

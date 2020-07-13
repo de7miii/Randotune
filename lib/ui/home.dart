@@ -60,9 +60,8 @@ class _HomePageState extends State<HomePage> {
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2),
                         itemBuilder: (context, index) {
-                          var curSong = value.allSongs[index];
                           return SongsListItem(
-                            songInfo: curSong,
+                            songInfo: value.allSongs[index],
                             musicModel: value,
                           );
                         },
@@ -105,8 +104,7 @@ class _HomePageState extends State<HomePage> {
                                         onPressed: () {
                                           value.getPlayingSongPosition();
                                           if (value.currentSongPosition == 0 ||
-                                              value.currentSongPosition <
-                                                  5000.0) {
+                                              value.currentSongPosition < 5000.0) {
                                             print(value.currentSongPosition);
                                             value.currentlyPlaying =
                                                 value.allSongs[Random.secure()
@@ -118,9 +116,7 @@ class _HomePageState extends State<HomePage> {
                                           } else {
                                             print(value.currentSongPosition);
                                             value.seek(
-                                                duration: -value
-                                                    .currentSongPosition
-                                                    .toInt());
+                                                duration: 0);
                                           }
                                         },
                                         icon: Icon(
@@ -196,7 +192,7 @@ class _HomePageState extends State<HomePage> {
                                 child: Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Slider.adaptive(
-                                    value: value.currentSongPosition / 1000,
+                                    value: value.currentSongPosition >= value.currentSongDuration ? 0.0 : value.currentSongPosition / 1000 ,
                                     min: 0.0,
                                     max: value.currentSongDuration / 1000,
                                     onChanged: (newVal) {
