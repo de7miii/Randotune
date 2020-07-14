@@ -4,52 +4,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 
-class SongsListItem extends StatelessWidget {
-  final SongInfo songInfo;
+class AlbumListItem extends StatelessWidget {
+  final AlbumInfo albumInfo;
   final MusicFinder musicModel;
   final String placeholderUrl =
       'https://via.placeholder.com/1080x1080?text=Album+Art';
 
-  SongsListItem({this.songInfo, @required this.musicModel});
+  AlbumListItem({this.albumInfo, @required this.musicModel});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print(songInfo.filePath);
-        musicModel.currentlyPlaying = songInfo;
-        musicModel.playSong(songInfo);
+        print(albumInfo.title);
+        musicModel.selectedAlbum = albumInfo;
       },
       child: Card(
         shadowColor: Colors.blueGrey.shade900,
-        elevation: 6,
+        elevation: 2,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
         borderOnForeground: true,
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: <Widget>[
-            songInfo.albumArtwork != null
+            albumInfo.albumArt != null
                 ? Image.file(
-                    File(songInfo.albumArtwork),
-                  )
+              File(albumInfo.albumArt),
+            )
                 : Image.network(placeholderUrl),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [
-                  Colors.indigo.withAlpha(100),
-                  Colors.indigo.withAlpha(80),
-                  Colors.indigo.withAlpha(30),
+                  Colors.indigo.shade900.withAlpha(255),
+                  Colors.indigo.shade700.withAlpha(155),
+                  Colors.indigo.withAlpha(90),
                 ], begin: Alignment.bottomCenter, end: Alignment.topCenter),
               ),
             ),
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.only(bottom: 8.0, left: 8.0, right: 8.0),
                 child: Text(
-                  songInfo.title,
-                  style: Theme.of(context).textTheme.headline5,
+                  albumInfo.title,
+                  maxLines: 3,
+                  style: Theme.of(context).textTheme.headline6.copyWith(color: Theme.of(context).accentColor, letterSpacing: 1.0, fontSize: 12.0),
                 ),
               ),
             )

@@ -17,6 +17,7 @@ class MusicFinder with ChangeNotifier {
   double _currentSongDuration = 0.0;
   double _currentSongPosition = 0.0;
   SongInfo _upNext;
+  AlbumInfo _selectedAlbum;
 
   List<SongInfo> get allSongs => _allSongs;
   List<AlbumInfo> get allAlbums => _allAlbums;
@@ -28,6 +29,7 @@ class MusicFinder with ChangeNotifier {
   double get currentSongDuration => _currentSongDuration;
   double get currentSongPosition => _currentSongPosition;
   SongInfo get upNext => _upNext;
+  AlbumInfo get selectedAlbum => _selectedAlbum;
 
   set isPlaying(bool newVal) {
     assert(newVal != null);
@@ -58,6 +60,12 @@ class MusicFinder with ChangeNotifier {
   set currentSongDuration(double newDur) {
     assert(newDur != null);
     _currentSongDuration = newDur;
+    notifyListeners();
+  }
+
+  set selectedAlbum(AlbumInfo newAlbum) {
+    assert(newAlbum != null);
+    _selectedAlbum = newAlbum;
     notifyListeners();
   }
 
