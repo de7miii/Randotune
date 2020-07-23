@@ -18,6 +18,7 @@ class MusicFinder with ChangeNotifier {
   double _currentSongPosition = 0.0;
   SongInfo _upNext;
   AlbumInfo _selectedAlbum;
+  List<SongInfo> _selectedAlbumSongs = [];
 
   List<SongInfo> get allSongs => _allSongs;
   List<AlbumInfo> get allAlbums => _allAlbums;
@@ -30,6 +31,7 @@ class MusicFinder with ChangeNotifier {
   double get currentSongPosition => _currentSongPosition;
   SongInfo get upNext => _upNext;
   AlbumInfo get selectedAlbum => _selectedAlbum;
+  List<SongInfo> get selectedAlbumSongs => _selectedAlbumSongs;
 
   set isPlaying(bool newVal) {
     assert(newVal != null);
@@ -69,22 +71,14 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
-  fetchSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) async {
-    _allSongs = await aq.getSongs(sortType: sortType);
-    notifyListeners();
-  }
-
-  fetchAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) async {
-    _allAlbums = await aq.getAlbums(sortType: sortType);
-    notifyListeners();
-  }
-
-  fetchArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) async {
-    _allArtists = await aq.getArtists(sortType: sortType);
+  set selectedAlbumSongs(List<SongInfo> albumSongs) {
+    assert(albumSongs != null);
+    _selectedAlbumSongs = albumSongs;
     notifyListeners();
   }
 
   findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) {
+    _isLoading = true;
     aq.getSongs(sortType: sortType).then((songsList) {
       _allSongs = songsList;
       _isLoading = false;
@@ -95,6 +89,7 @@ class MusicFinder with ChangeNotifier {
   }
 
   findAllAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) {
+    _isLoading = true;
     aq.getAlbums(sortType: sortType).then((albumList) {
       _allAlbums = albumList;
       _isLoading = false;
@@ -102,6 +97,19 @@ class MusicFinder with ChangeNotifier {
     }, onError: (err) {
       print(err);
     });
+  }
+
+  findAlbumSongs({@required String albumId}) {
+    _isLoading = true;
+    aq.getSongsFromAlbum(albumId: albumId, sortType: SongSortType.SMALLER_TRACK_NUMBER).then(
+      (songsList) {
+        print(songsList);
+        _selectedAlbumSongs = songsList;
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (err) => print(err),
+    );
   }
 
   findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) {
@@ -122,6 +130,7 @@ class MusicFinder with ChangeNotifier {
     if (res == 1) {
       getPlayingSongPosition();
       print("Playing: ${song.title}");
+      notifyListeners();
     }
     audioPlayer.onPlayerCompletion.listen((event) {
       print('song finished');

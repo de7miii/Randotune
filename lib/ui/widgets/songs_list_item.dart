@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
 import 'package:random_music_player/logic/music_finder.dart';
@@ -18,42 +16,25 @@ class SongsListItem extends StatelessWidget {
       onTap: () {
         print(songInfo.filePath);
         musicModel.currentlyPlaying = songInfo;
-        musicModel.playSong(songInfo);
+        musicModel.playSong(musicModel.currentlyPlaying);
+        musicModel.isPlaying = true;
       },
-      child: Card(
-        shadowColor: Colors.blueGrey.shade900,
-        elevation: 6,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-        borderOnForeground: true,
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: <Widget>[
-            songInfo.albumArtwork != null
-                ? Image.file(
-                    File(songInfo.albumArtwork),
-                  )
-                : Image.network(placeholderUrl),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  Colors.indigo.withAlpha(100),
-                  Colors.indigo.withAlpha(80),
-                  Colors.indigo.withAlpha(30),
-                ], begin: Alignment.bottomCenter, end: Alignment.topCenter),
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  songInfo.title,
-                  style: Theme.of(context).textTheme.headline5,
-                ),
-              ),
-            )
-          ],
+      child: ListTile(
+        leading: songInfo.track != null && int.parse(songInfo.track) > 0
+            ? Text(
+                songInfo.track.length == 4
+                    ? int.parse(songInfo.track) > 1009 ? songInfo.track.substring(2) : songInfo.track.substring(3)
+                    : songInfo.track,
+                style: Theme.of(context).textTheme.bodyText1,
+              )
+            : null,
+        title: Text(songInfo.title),
+        subtitle: Text(songInfo.artist),
+        trailing: Icon(
+          musicModel.isPlaying && musicModel.currentlyPlaying == songInfo
+              ? Icons.pause
+              : Icons.play_arrow,
+          size: 26.0,
         ),
       ),
     );

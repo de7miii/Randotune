@@ -16,8 +16,9 @@ class AlbumListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print(albumInfo.title);
         musicModel.selectedAlbum = albumInfo;
+        musicModel.findAlbumSongs(albumId: albumInfo.id);
+        Navigator.of(context).pushNamed('/album_page');
       },
       child: Card(
         shadowColor: Colors.blueGrey.shade900,
