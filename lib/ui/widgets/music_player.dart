@@ -1,22 +1,26 @@
 import 'dart:io';
-import 'dart:math';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 
 class MusicPlayer extends StatefulWidget {
   final MusicFinder musicModel;
 
-  MusicPlayer({@required this.musicModel});
+  MusicPlayer({this.musicModel});
 
   @override
   _MusicPlayerState createState() => _MusicPlayerState();
 }
 
 class _MusicPlayerState extends State<MusicPlayer> {
+  MusicFinder musicModel;
   @override
   Widget build(BuildContext context) {
+    musicModel = Provider.of<MusicFinder>(context, listen: true);
     return Stack(
       children: [
         ClipRRect(
@@ -24,10 +28,10 @@ class _MusicPlayerState extends State<MusicPlayer> {
             topLeft: Radius.circular(16.0),
             topRight: Radius.circular(16.0),
           ),
-          child: widget.musicModel.currentlyPlaying != null &&
-                  widget.musicModel.currentlyPlaying.albumArtwork != null
+          child: musicModel.currentlyPlaying != null &&
+                  musicModel.currentlyPlaying.albumArtwork != null
               ? Image.file(
-                  File(widget.musicModel.currentlyPlaying.albumArtwork),
+                  File(musicModel.currentlyPlaying.albumArtwork),
                   width: MediaQuery.of(context).size.width,
                   fit: BoxFit.cover,
                 )
@@ -36,12 +40,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
         Container(
           height: MediaQuery.of(context).size.height * 0.175,
           decoration: BoxDecoration(
-              color: widget.musicModel.currentlyPlaying == null ||
-                      widget.musicModel.currentlyPlaying.albumArtwork == null
+              color: musicModel.currentlyPlaying == null ||
+                      musicModel.currentlyPlaying.albumArtwork == null
                   ? Colors.indigo.shade900.withAlpha(240)
                   : null,
-              gradient: widget.musicModel.currentlyPlaying != null &&
-                      widget.musicModel.currentlyPlaying.albumArtwork != null
+              gradient: musicModel.currentlyPlaying != null &&
+                      musicModel.currentlyPlaying.albumArtwork != null
                   ? LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
@@ -73,21 +77,27 @@ class _MusicPlayerState extends State<MusicPlayer> {
                           children: <Widget>[
                             IconButton(
                               onPressed: () {
-                                widget.musicModel.getPlayingSongPosition();
-                                if (widget.musicModel.currentSongPosition == 0 ||
-                                    widget.musicModel.currentSongPosition <
+                                AudioService.playbackStateStream
+                                    .listen((event) {
+                                  if (event.playing) {
+                                    setState(() {
+                                      musicModel.isPlaying = true;
+                                    });
+                                  } else {
+                                    setState(() {
+                                      musicModel.isPlaying = false;
+                                    });
+                                  }
+                                });
+                                if (musicModel.currentSongPosition ==
+                                        0 ||
+                                    musicModel.currentSongPosition <
                                         5000.0) {
-                                  print(widget.musicModel.currentSongPosition);
-                                  widget.musicModel.currentlyPlaying =
-                                      widget.musicModel.allSongs[Random.secure()
-                                          .nextInt(
-                                              widget.musicModel.allSongs.length)];
-                                  widget.musicModel.playSong(
-                                      widget.musicModel.currentlyPlaying);
-                                  widget.musicModel.isPlaying = true;
+                                  print(musicModel.currentSongPosition);
+                                  skipToPrevious();
                                 } else {
-                                  print(widget.musicModel.currentSongPosition);
-                                  widget.musicModel.seek(duration: 0);
+                                  print(musicModel.currentSongPosition);
+                                  seek(0);
                                 }
                               },
                               icon: Icon(
@@ -103,32 +113,25 @@ class _MusicPlayerState extends State<MusicPlayer> {
                             ),
                             IconButton(
                               onPressed: () {
-                                if (widget.musicModel.isPlaying &&
-                                    widget.musicModel.currentlyPlaying != null) {
-                                  setState(() {
-                                    widget.musicModel.pauseSong();
-                                    widget.musicModel.isPlaying = false;
-                                  });
-                                } else if (!widget.musicModel.isPlaying &&
-                                    widget.musicModel.currentlyPlaying != null) {
-                                  setState(() {
-                                    widget.musicModel.resumeSong();
-                                    widget.musicModel.isPlaying = true;
-                                  });
-                                } else if (!widget.musicModel.isPlaying &&
-                                    widget.musicModel.currentlyPlaying == null) {
-                                  setState(() {
-                                    widget.musicModel.currentlyPlaying = widget
-                                            .musicModel.allSongs[
-                                        Random.secure().nextInt(
-                                            widget.musicModel.allSongs.length)];
-                                    widget.musicModel.playSong(
-                                        widget.musicModel.currentlyPlaying);
-                                    widget.musicModel.isPlaying = true;
-                                  });
+                                AudioService.playbackStateStream
+                                    .listen((event) {
+                                  if (event.playing) {
+                                    setState(() {
+                                      musicModel.isPlaying = true;
+                                    });
+                                  } else {
+                                    setState(() {
+                                      musicModel.isPlaying = false;
+                                    });
+                                  }
+                                });
+                                if (musicModel.isPlaying) {
+                                  pause();
+                                } else {
+                                  play();
                                 }
                               },
-                              icon: !widget.musicModel.isPlaying
+                              icon: !musicModel.isPlaying
                                   ? Icon(
                                       Icons.play_arrow,
                                       color: Theme.of(context).accentColor,
@@ -145,13 +148,19 @@ class _MusicPlayerState extends State<MusicPlayer> {
                             ),
                             IconButton(
                               onPressed: () {
-                                widget.musicModel.currentlyPlaying =
-                                    widget.musicModel.allSongs[Random.secure()
-                                        .nextInt(
-                                            widget.musicModel.allSongs.length)];
-                                widget.musicModel
-                                    .playSong(widget.musicModel.currentlyPlaying);
-                                widget.musicModel.isPlaying = true;
+                                AudioService.playbackStateStream
+                                    .listen((event) {
+                                  if (event.playing) {
+                                    setState(() {
+                                      musicModel.isPlaying = true;
+                                    });
+                                  } else {
+                                    setState(() {
+                                      musicModel.isPlaying = false;
+                                    });
+                                  }
+                                });
+                                skipToNext();
                               },
                               icon: Icon(
                                 Icons.skip_next,
@@ -166,12 +175,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
                       ),
                       Expanded(
                         flex: 1,
-                        child: widget.musicModel.currentlyPlaying != null
+                        child: musicModel.currentlyPlaying != null
                             ? Padding(
                                 padding: const EdgeInsets.only(
                                     left: 4.0, right: 4.0),
                                 child: Text(
-                                  "${widget.musicModel.currentlyPlaying.title} - ${widget.musicModel.currentlyPlaying.artist}",
+                                  "${musicModel.currentlyPlaying.title} - ${musicModel.currentlyPlaying.artist}",
                                   maxLines: 3,
                                   style: Theme.of(context)
                                       .textTheme
@@ -182,7 +191,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                 ),
                               )
                             : Text(''),
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -194,9 +203,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 8.0),
                           child: Text(
-                            widget.musicModel.currentSongPosition ~/ 1000 <= 59
-                                ? "0:${widget.musicModel.currentSongPosition ~/ 1000}"
-                                : (widget.musicModel.currentSongPosition ~/
+                            musicModel.currentSongPosition ~/ 1000 <= 59
+                                ? "0:${musicModel.currentSongPosition ~/ 1000}"
+                                : (musicModel.currentSongPosition ~/
                                         1000 /
                                         60)
                                     .toStringAsPrecision(3)
@@ -212,17 +221,17 @@ class _MusicPlayerState extends State<MusicPlayer> {
                       Expanded(
                         flex: 8,
                         child: Slider.adaptive(
-                          value: widget.musicModel.currentSongPosition >=
-                                  widget.musicModel.currentSongDuration
+                          value: musicModel.currentSongPosition >=
+                                  musicModel.currentSongDuration
                               ? 0.0
-                              : widget.musicModel.currentSongPosition / 1000,
+                              : musicModel.currentSongPosition / 1000,
                           min: 0.0,
-                          max: widget.musicModel.currentSongDuration / 1000,
+                          max: musicModel.currentSongDuration / 1000,
                           onChanged: (newVal) {
-                            widget.musicModel.seek(duration: newVal.toInt());
+                          seek(newVal.toInt());
                             setState(() {
-                              widget.musicModel.currentSongPosition =
-                                  newVal * 1000;
+                              musicModel.currentSongPosition =
+                                  (newVal.toInt() * 1000);
                             });
                           },
                         ),
@@ -234,7 +243,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                             child: Padding(
                               padding: const EdgeInsets.only(right: 8.0),
                               child: Text(
-                                (widget.musicModel.currentSongDuration ~/
+                                (musicModel.currentSongDuration ~/
                                         1000 /
                                         60)
                                     .toStringAsPrecision(3)
@@ -257,4 +266,54 @@ class _MusicPlayerState extends State<MusicPlayer> {
       ],
     );
   }
+
+  seek(int duration) => AudioService.seekTo(Duration(seconds: duration));
+
+  skipToPrevious() async{
+    AudioService.skipToPrevious();
+    _handleCustomEvents();
+  }
+
+  skipToNext() async {
+    AudioService.skipToNext();
+    _handleCustomEvents();
+  }
+
+  pause() => AudioService.pause();
+
+  play() async {
+    if (AudioService.running) {
+      await AudioService.play();
+      _handleCustomEvents();
+    } else {
+      await start();
+      play();
+    }
+  }
+
+  start() => AudioService.start(
+      backgroundTaskEntrypoint: _entryPoint,
+      params: {
+        'allSongs': musicModel.allSongs.map((e) => e.filePath).toList()
+      },
+      androidNotificationChannelName: 'Random Music Player',
+      androidNotificationColor: Theme.of(context).primaryColor.value,
+      androidNotificationClickStartsActivity: true);
+
+  _handleCustomEvents(){
+    AudioService.customEventStream.listen((event) {
+      if (event is String) {
+        var currentSong = musicModel.allSongs
+            .where((element) => element.filePath == event)
+            .reduce((value, element) => element);
+        musicModel.currentlyPlaying = currentSong;
+        musicModel.currentSongDuration =
+            int.parse(currentSong.duration);
+      } else if (event is int) {
+        musicModel.currentSongPosition = event;
+      }
+    });
+  }
 }
+
+_entryPoint() => AudioServiceBackground.run(() => BackgroundMusicHandler());

@@ -2,22 +2,21 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
+import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 
 class AlbumListItem extends StatelessWidget {
   final AlbumInfo albumInfo;
-  final MusicFinder musicModel;
   final String placeholderUrl =
       'https://via.placeholder.com/1080x1080?text=Album+Art';
 
-  AlbumListItem({this.albumInfo, @required this.musicModel});
+  AlbumListItem({this.albumInfo});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        musicModel.selectedAlbum = albumInfo;
-        musicModel.findAlbumSongs(albumId: albumInfo.id);
+        Provider.of<MusicFinder>(context, listen: false).findAlbumSongs(album: albumInfo);
         Navigator.of(context).pushNamed('/album_page');
       },
       child: Card(

@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
 
@@ -12,68 +9,56 @@ class MusicFinder with ChangeNotifier {
   List<ArtistInfo> _allArtists = [];
   bool _isLoading = true;
   bool _isPlaying = false;
-  SongInfo _playing;
-  AudioPlayer _audioPlayer = AudioPlayer();
-  double _currentSongDuration = 0.0;
-  double _currentSongPosition = 0.0;
-  SongInfo _upNext;
   AlbumInfo _selectedAlbum;
   List<SongInfo> _selectedAlbumSongs = [];
+  SongInfo _currentlyPlaying;
+  int _currentSongPosition = 0;
+  int _currentSongDuration = 0;
 
   List<SongInfo> get allSongs => _allSongs;
   List<AlbumInfo> get allAlbums => _allAlbums;
   List<ArtistInfo> get allArtists => _allArtists;
   bool get isLoading => _isLoading;
   bool get isPlaying => _isPlaying;
-  SongInfo get currentlyPlaying => _playing;
-  AudioPlayer get audioPlayer => _audioPlayer;
-  double get currentSongDuration => _currentSongDuration;
-  double get currentSongPosition => _currentSongPosition;
-  SongInfo get upNext => _upNext;
   AlbumInfo get selectedAlbum => _selectedAlbum;
   List<SongInfo> get selectedAlbumSongs => _selectedAlbumSongs;
+  SongInfo get currentlyPlaying => _currentlyPlaying;
+  int get currentSongPosition => _currentSongPosition;
+  int get currentSongDuration => _currentSongDuration;
 
-  set isPlaying(bool newVal) {
-    assert(newVal != null);
-    _isPlaying = newVal;
+  set selectedAlbumSongs(List<SongInfo> albumSongs) {
+    assert(albumSongs != null);
+    _selectedAlbumSongs = albumSongs;
     notifyListeners();
   }
 
-  set currentlyPlaying(SongInfo newSong) {
-    assert(newSong != null);
-    _playing = newSong;
-    currentSongDuration = double.parse(newSong.duration);
-    isPlaying = true;
-    notifyListeners();
-  }
-
-  set upNext(SongInfo newSong) {
-    assert(newSong != null);
-    _upNext = newSong;
-    notifyListeners();
-  }
-
-  set currentSongPosition(double newPos) {
-    assert(newPos != null);
-    _currentSongPosition = newPos;
-    notifyListeners();
-  }
-
-  set currentSongDuration(double newDur) {
-    assert(newDur != null);
-    _currentSongDuration = newDur;
-    notifyListeners();
-  }
-
-  set selectedAlbum(AlbumInfo newAlbum) {
+  set selectedAlbum(AlbumInfo newAlbum){
     assert(newAlbum != null);
     _selectedAlbum = newAlbum;
     notifyListeners();
   }
 
-  set selectedAlbumSongs(List<SongInfo> albumSongs) {
-    assert(albumSongs != null);
-    _selectedAlbumSongs = albumSongs;
+  set isPlaying(bool state){
+    assert (state != null);
+    _isPlaying = state;
+    notifyListeners();
+  }
+
+  set currentlyPlaying(SongInfo newSong){
+    assert(newSong != null);
+    _currentlyPlaying = newSong;
+    notifyListeners();
+  }
+
+  set currentSongPosition(int newPos){
+    assert(newPos != null);
+    _currentSongPosition = newPos;
+    notifyListeners();
+  }
+
+  set currentSongDuration(int newDur){
+    assert(newDur != null);
+    _currentSongDuration = newDur;
     notifyListeners();
   }
 
@@ -99,17 +84,25 @@ class MusicFinder with ChangeNotifier {
     });
   }
 
-  findAlbumSongs({@required String albumId}) {
+  findAlbumSongs({@required AlbumInfo album}) {
+    assert(album != null);
+    selectedAlbum = album;
     _isLoading = true;
-    aq.getSongsFromAlbum(albumId: albumId, sortType: SongSortType.SMALLER_TRACK_NUMBER).then(
-      (songsList) {
-        print(songsList);
-        _selectedAlbumSongs = songsList;
-        _isLoading = false;
-        notifyListeners();
-      },
-      onError: (err) => print(err),
-    );
+    if(allSongs?.isNotEmpty ?? false){
+      _selectedAlbumSongs = allSongs.where((element) => element.albumId == album.id).toList();
+      _isLoading = false;
+      notifyListeners();
+    }else {
+      aq.getSongsFromAlbum(albumId: album.id, sortType: SongSortType.SMALLER_TRACK_NUMBER).then(
+            (songsList) {
+          print(songsList);
+          _selectedAlbumSongs = songsList;
+          _isLoading = false;
+          notifyListeners();
+        },
+        onError: (err) => print(err),
+      );
+    }
   }
 
   findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) {
@@ -120,68 +113,5 @@ class MusicFinder with ChangeNotifier {
     }, onError: (err) {
       print(err);
     });
-  }
-
-  playSong(SongInfo song) async {
-    assert(song != null);
-    assert(audioPlayer != null);
-    audioPlayer.setReleaseMode(ReleaseMode.STOP);
-    int res = await audioPlayer.play(song.filePath, isLocal: true);
-    if (res == 1) {
-      getPlayingSongPosition();
-      print("Playing: ${song.title}");
-      notifyListeners();
-    }
-    audioPlayer.onPlayerCompletion.listen((event) {
-      print('song finished');
-      Future.delayed(Duration(seconds: 5));
-      currentSongPosition = 0.0;
-      currentlyPlaying = upNext;
-      notifyListeners();
-      playSong(currentlyPlaying);
-    });
-  }
-
-  pauseSong() async {
-    assert(audioPlayer != null);
-    await audioPlayer.pause();
-  }
-
-  resumeSong() async {
-    assert(audioPlayer != null);
-    await audioPlayer.resume();
-  }
-
-  seek({@required int duration}) async {
-    assert(audioPlayer != null);
-    assert(duration != null);
-    if (audioPlayer.state == AudioPlayerState.PLAYING ||
-        audioPlayer.state == AudioPlayerState.PAUSED) {
-      if (duration == 0) {
-        await audioPlayer.seek(Duration(seconds: 0));
-        currentSongPosition = 0.0;
-        notifyListeners();
-      } else {
-        await audioPlayer.seek(Duration(seconds: duration));
-        notifyListeners();
-      }
-    }
-  }
-
-  getPlayingSongPosition() async {
-    assert(audioPlayer != null);
-    if (audioPlayer.state == AudioPlayerState.PLAYING) {
-      audioPlayer.onAudioPositionChanged.listen((event) {
-        currentSongPosition = event.inMilliseconds.toDouble();
-        notifyListeners();
-        if ((currentSongDuration - event.inMilliseconds < 10000 &&
-                upNext == null) ||
-            (upNext == currentlyPlaying &&
-                currentSongDuration - event.inMilliseconds < 10000)) {
-          upNext = allSongs[Random.secure().nextInt(allSongs.length)];
-          print("Up next: ${upNext.title}");
-        }
-      });
-    }
   }
 }

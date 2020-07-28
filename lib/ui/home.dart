@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
 import 'package:random_music_player/ui/widgets/music_player.dart';
+import 'package:tuple/tuple.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -29,8 +31,8 @@ class MyApp extends StatelessWidget {
         ),
         initialRoute: '/',
         routes: {
-          '/': (context) => HomePage(),
-          '/album_page': (context) => AlbumPage()
+          '/': (context) => AudioServiceWidget(child: HomePage()),
+          '/album_page': (context) => AudioServiceWidget(child: AlbumPage())
         },
       ),
     );
@@ -53,22 +55,22 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Container(
         child: SafeArea(
-          child: Consumer<MusicFinder>(
+          child: Selector<MusicFinder, Tuple2<List, bool>>(
+            selector: (context, model) => Tuple2(model.allAlbums, model.isLoading),
             builder: (context, value, child) {
               return Stack(
                 children: <Widget>[
-                  !value.isLoading
+                  !value.item2
                       ? GridView.builder(
                           padding: EdgeInsets.only(bottom: 144.0),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2),
                           itemBuilder: (context, index) {
                             return AlbumListItem(
-                              musicModel: value,
-                              albumInfo: value.allAlbums[index],
+                              albumInfo: value.item1[index],
                             );
                           },
-                          itemCount: value.allAlbums.length,
+                          itemCount: value.item1.length,
                         )
                       : Center(
                           child: CircularProgressIndicator(),
@@ -78,9 +80,9 @@ class _HomePageState extends State<HomePage> {
                     maxChildSize: 0.2,
                     minChildSize: 0.2,
                     builder: (context, scrollController) {
-                      return MusicPlayer(
-                        musicModel: value,
-                      );
+                      return !value.item2 ?
+                      MusicPlayer() :
+                      null;
                     },
                   ),
                 ],
@@ -115,5 +117,11 @@ class _HomePageState extends State<HomePage> {
       Provider.of<MusicFinder>(context, listen: false).findAllAlbums();
       Provider.of<MusicFinder>(context, listen: false).findAllSongs();
     }
+  }
+
+  @override
+  void dispose() {
+    AudioService.stop();
+    super.dispose();
   }
 }
