@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -8,9 +9,7 @@ import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 
 class MusicPlayer extends StatefulWidget {
-  final MusicFinder musicModel;
-
-  MusicPlayer({this.musicModel});
+  MusicPlayer();
 
   @override
   _MusicPlayerState createState() => _MusicPlayerState();
@@ -80,19 +79,13 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                 AudioService.playbackStateStream
                                     .listen((event) {
                                   if (event.playing) {
-                                    setState(() {
-                                      musicModel.isPlaying = true;
-                                    });
+                                    musicModel.isPlaying = true;
                                   } else {
-                                    setState(() {
-                                      musicModel.isPlaying = false;
-                                    });
+                                    musicModel.isPlaying = false;
                                   }
                                 });
-                                if (musicModel.currentSongPosition ==
-                                        0 ||
-                                    musicModel.currentSongPosition <
-                                        5000.0) {
+                                if (musicModel.currentSongPosition == 0 ||
+                                    musicModel.currentSongPosition < 5000.0) {
                                   print(musicModel.currentSongPosition);
                                   skipToPrevious();
                                 } else {
@@ -115,14 +108,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
                               onPressed: () {
                                 AudioService.playbackStateStream
                                     .listen((event) {
+                                  print(event.playing);
                                   if (event.playing) {
-                                    setState(() {
-                                      musicModel.isPlaying = true;
-                                    });
+                                    musicModel.isPlaying = true;
                                   } else {
-                                    setState(() {
-                                      musicModel.isPlaying = false;
-                                    });
+                                    musicModel.isPlaying = false;
                                   }
                                 });
                                 if (musicModel.isPlaying) {
@@ -151,13 +141,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                 AudioService.playbackStateStream
                                     .listen((event) {
                                   if (event.playing) {
-                                    setState(() {
-                                      musicModel.isPlaying = true;
-                                    });
+                                    musicModel.isPlaying = true;
                                   } else {
-                                    setState(() {
-                                      musicModel.isPlaying = false;
-                                    });
+                                    musicModel.isPlaying = false;
                                   }
                                 });
                                 skipToNext();
@@ -203,13 +189,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 8.0),
                           child: Text(
-                            musicModel.currentSongPosition ~/ 1000 <= 59
-                                ? "0:${musicModel.currentSongPosition ~/ 1000}"
-                                : (musicModel.currentSongPosition ~/
-                                        1000 /
-                                        60)
-                                    .toStringAsPrecision(3)
-                                    .replaceAll('.', ':'),
+                            "${((musicModel.currentSongPosition ~/ 1000) % 3600) ~/ 60}:${(musicModel.currentSongPosition ~/ 1000) % 60}",
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyText2
@@ -221,14 +201,15 @@ class _MusicPlayerState extends State<MusicPlayer> {
                       Expanded(
                         flex: 8,
                         child: Slider.adaptive(
-                          value: musicModel.currentSongPosition >=
-                                  musicModel.currentSongDuration
-                              ? 0.0
-                              : musicModel.currentSongPosition / 1000,
+                          value: max(
+                                  0.0,
+                                  min(musicModel.currentSongPosition,
+                                      musicModel.currentSongDuration)) /
+                              1000,
                           min: 0.0,
                           max: musicModel.currentSongDuration / 1000,
                           onChanged: (newVal) {
-                          seek(newVal.toInt());
+                            seek(newVal.toInt());
                             setState(() {
                               musicModel.currentSongPosition =
                                   (newVal.toInt() * 1000);
@@ -243,11 +224,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                             child: Padding(
                               padding: const EdgeInsets.only(right: 8.0),
                               child: Text(
-                                (musicModel.currentSongDuration ~/
-                                        1000 /
-                                        60)
-                                    .toStringAsPrecision(3)
-                                    .replaceAll('.', ':'),
+                                "${((musicModel.currentSongDuration ~/ 1000) % 3600) ~/ 60}:${(musicModel.currentSongDuration ~/ 1000) % 60}",
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyText2
@@ -269,14 +246,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
 
   seek(int duration) => AudioService.seekTo(Duration(seconds: duration));
 
-  skipToPrevious() async{
+  skipToPrevious() async {
     AudioService.skipToPrevious();
-    _handleCustomEvents();
   }
 
   skipToNext() async {
     AudioService.skipToNext();
-    _handleCustomEvents();
   }
 
   pause() => AudioService.pause();
@@ -284,7 +259,6 @@ class _MusicPlayerState extends State<MusicPlayer> {
   play() async {
     if (AudioService.running) {
       await AudioService.play();
-      _handleCustomEvents();
     } else {
       await start();
       play();
@@ -294,25 +268,52 @@ class _MusicPlayerState extends State<MusicPlayer> {
   start() => AudioService.start(
       backgroundTaskEntrypoint: _entryPoint,
       params: {
-        'allSongs': musicModel.allSongs.map((e) => e.filePath).toList()
+        'allSongs': musicModel.allSongs
+            .map((e) => [
+                  e.id,
+                  e.filePath,
+                  e.album,
+                  e.title,
+                  e.artist,
+                  e.albumArtwork != null
+                      ? File(e.albumArtwork).uri.toString()
+                      : 'https://via.placeholder.com/1080x1080?text=Album+Art'
+                ])
+            .toList()
       },
       androidNotificationChannelName: 'Random Music Player',
       androidNotificationColor: Theme.of(context).primaryColor.value,
       androidNotificationClickStartsActivity: true);
 
-  _handleCustomEvents(){
+  _handleCustomEvents() {
     AudioService.customEventStream.listen((event) {
       if (event is String) {
         var currentSong = musicModel.allSongs
             .where((element) => element.filePath == event)
             .reduce((value, element) => element);
         musicModel.currentlyPlaying = currentSong;
-        musicModel.currentSongDuration =
-            int.parse(currentSong.duration);
+        musicModel.currentSongDuration = int.parse(currentSong.duration);
       } else if (event is int) {
-        musicModel.currentSongPosition = event;
+        print(event);
+        if(event == -1){
+          play();
+        }else {
+          musicModel.currentSongPosition = event;
+          musicModel.isPlaying = true;
+        }
       }
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _handleCustomEvents();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
   }
 }
 

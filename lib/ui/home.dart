@@ -14,26 +14,28 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => MusicFinder(),
-      child: MaterialApp(
-        theme: ThemeData(
-          primaryColor: Colors.indigo,
-          primaryColorDark: Colors.indigo.shade800,
-          primaryColorLight: Colors.indigo.shade200,
-          accentColor: Colors.deepOrange,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          sliderTheme: SliderThemeData(
-              activeTrackColor: Theme.of(context).primaryColorDark,
-              inactiveTrackColor: Theme.of(context).primaryColorLight,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0),
-              thumbColor: Theme.of(context).primaryColorDark,
-              overlayShape: RoundSliderOverlayShape(overlayRadius: 8.0),
-              trackHeight: 2.0),
+      child: AudioServiceWidget(
+        child: MaterialApp(
+          theme: ThemeData(
+            primaryColor: Colors.indigo,
+            primaryColorDark: Colors.indigo.shade800,
+            primaryColorLight: Colors.indigo.shade200,
+            accentColor: Colors.deepOrange,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+            sliderTheme: SliderThemeData(
+                activeTrackColor: Theme.of(context).primaryColorDark,
+                inactiveTrackColor: Theme.of(context).primaryColorLight,
+                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                thumbColor: Theme.of(context).primaryColorDark,
+                overlayShape: RoundSliderOverlayShape(overlayRadius: 8.0),
+                trackHeight: 2.0),
+          ),
+          initialRoute: '/',
+          routes: {
+            '/': (context) => HomePage(),
+            '/album_page': (context) => AlbumPage()
+          },
         ),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => AudioServiceWidget(child: HomePage()),
-          '/album_page': (context) => AudioServiceWidget(child: AlbumPage())
-        },
       ),
     );
   }
@@ -50,7 +52,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('RandomTune'),
+        title: Text('RandoTron'),
         centerTitle: true,
       ),
       body: Container(
@@ -102,7 +104,6 @@ class _HomePageState extends State<HomePage> {
       if (status.isGranted) {
         Provider.of<MusicFinder>(context, listen: false).findAllSongs();
         Provider.of<MusicFinder>(context, listen: false).findAllAlbums();
-        Provider.of<MusicFinder>(context, listen: false).findAllArtists();
       }
     }, onError: (err) {
       print(err);
@@ -115,7 +116,6 @@ class _HomePageState extends State<HomePage> {
     if (permissionStatus.isGranted) {
       Provider.of<MusicFinder>(context, listen: false).findAllArtists();
       Provider.of<MusicFinder>(context, listen: false).findAllAlbums();
-      Provider.of<MusicFinder>(context, listen: false).findAllSongs();
     }
   }
 

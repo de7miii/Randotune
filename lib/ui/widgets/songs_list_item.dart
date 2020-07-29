@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
@@ -22,29 +24,25 @@ class _SongsListItemState extends State<SongsListItem> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print(widget.songInfo.filePath);
-        play(context);
+        playMediaItem(context);
       },
       child: ListTile(
         leading: widget.songInfo.track != null &&
-            int.parse(widget.songInfo.track) is int &&
-            int.parse(widget.songInfo.track) > 0
+                int.parse(widget.songInfo.track) is int &&
+                int.parse(widget.songInfo.track) > 0
             ? Text(
-          widget.songInfo.track.length == 4
-              ? int.parse(widget.songInfo.track) > 1009
-              ? widget.songInfo.track.substring(2)
-              : widget.songInfo.track.substring(3)
-              : widget.songInfo.track,
-          style: Theme
-              .of(context)
-              .textTheme
-              .bodyText1,
-        )
+                widget.songInfo.track.length == 4
+                    ? int.parse(widget.songInfo.track) > 1009
+                        ? widget.songInfo.track.substring(2)
+                        : widget.songInfo.track.substring(3)
+                    : widget.songInfo.track,
+                style: Theme.of(context).textTheme.bodyText1,
+              )
             : null,
         title: Text(widget.songInfo.title),
         subtitle: Text(widget.songInfo.artist),
         trailing: Consumer<MusicFinder>(
-          builder:(context, value, child) => Icon(
+          builder: (context, value, child) => Icon(
             value.isPlaying && widget.songInfo.id == value.currentlyPlaying.id
                 ? Icons.pause
                 : Icons.play_arrow,
@@ -55,45 +53,41 @@ class _SongsListItemState extends State<SongsListItem> {
     );
   }
 
-  play(BuildContext context) async {
+  playMediaItem(BuildContext context) async {
     if (AudioService.running) {
-      AudioService.playMediaItem(MediaItem(
-          id: widget.songInfo.filePath, album: widget.songInfo.album, title: widget.songInfo.title));
-      _handleCustomEvents();
+      var artUri = widget.songInfo.albumArtwork != null ? File(widget.songInfo.albumArtwork).uri.toString() : 'https://via.placeholder.com/1080x1080?text=Album+Art';
+      await AudioService.playMediaItem(MediaItem(
+          id: widget.songInfo.filePath,
+          album: widget.songInfo.album,
+          title: widget.songInfo.title,
+          artist: widget.songInfo.artist,
+          artUri: artUri));
+//      _handleCustomEvents();
     } else {
       await start(context);
-      play(context);
+      playMediaItem(context);
     }
   }
 
-  start(BuildContext context) =>
-      AudioService.start(
-          backgroundTaskEntrypoint: _entryPoint,
-          params: {
-            'allSongs': Provider.of<MusicFinder>(context, listen: false).allSongs.map((e) => e.filePath).toList()
-          },
-          androidNotificationChannelName: 'Random Music Player',
-          androidNotificationColor: Theme
-              .of(context)
-              .primaryColor
-              .value,
-          androidNotificationClickStartsActivity: true);
-
-  _handleCustomEvents() {
-    MusicFinder model = Provider.of<MusicFinder>(context, listen: false);
-    AudioService.customEventStream.listen((event) {
-      if (event is String) {
-        var currentSong = model.allSongs
-            .where((element) => element.filePath == event)
-            .reduce((value, element) => element);
-        model.currentlyPlaying = currentSong;
-        model.currentSongDuration =
-            int.parse(currentSong.duration);
-      } else if (event is int) {
-        model.currentSongPosition = event;
-        model.isPlaying = true;
-      }
-    });
-  }
+  start(BuildContext context) => AudioService.start(
+      backgroundTaskEntrypoint: _entryPoint,
+      params: {
+        'allSongs': Provider.of<MusicFinder>(context, listen: false).allSongs
+            .map((e) => [
+          e.id,
+          e.filePath,
+          e.album,
+          e.title,
+          e.artist,
+          e.albumArtwork != null
+              ? File(e.albumArtwork).uri.toString()
+              : 'https://via.placeholder.com/1080x1080?text=Album+Art'
+        ])
+            .toList()
+      },
+      androidNotificationChannelName: 'Random Music Player',
+      androidNotificationColor: Theme.of(context).primaryColor.value,
+      androidNotificationClickStartsActivity: true);
 }
-  _entryPoint() => AudioServiceBackground.run(() => BackgroundMusicHandler());
+
+_entryPoint() => AudioServiceBackground.run(() => BackgroundMusicHandler());
