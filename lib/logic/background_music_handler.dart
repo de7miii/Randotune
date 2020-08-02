@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:math';
 
@@ -13,6 +14,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onStart(Map<String, dynamic> params) {
+    print('onStart');
     audioPlayer = AudioPlayer(mode: PlayerMode.MEDIA_PLAYER);
     allSongs = params['allSongs'];
     super.onStart(params);
@@ -20,6 +22,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onPlay() async {
+    print('onPlay');
     if (audioPlayer.state == AudioPlayerState.PAUSED) {
       resumeSong(audioPlayer);
       AudioServiceBackground.setState(
@@ -35,12 +38,13 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
       AudioServiceBackground.sendCustomEvent(song[1]);
       int res = await playSong(song[1], audioPlayer);
       if (res == 1) {
-        audioPlayer.onPlayerStateChanged.listen((event) {
+        audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
           if(event == AudioPlayerState.COMPLETED){
             AudioServiceBackground.sendCustomEvent(-1);
+            print(event);
           }
         });
-        audioPlayer.onAudioPositionChanged.listen((event) {
+        audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
           AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
         });
         AudioServiceBackground.setState(
@@ -59,27 +63,33 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onPause() async {
+    print('onPause 1');
     int res = await pauseSong(audioPlayer);
     if (res == 1) {
+      print('onPause 2');
       print(audioPlayer.state);
     }
     AudioServiceBackground.setState(
         controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
         processingState: AudioProcessingState.ready,
         playing: false);
+    print('onPause 3');
   }
 
   @override
   void onPlayMediaItem(MediaItem mediaItem) async {
-    AudioServiceBackground.setState(
-        controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
-        processingState: AudioProcessingState.connecting,
-        playing: false);
+    print('onPlayMediaItem');
     AudioServiceBackground.sendCustomEvent(mediaItem.id);
     int res = await playSong(mediaItem.id, audioPlayer);
     if (res == 1) {
       print(audioPlayer.state);
-      audioPlayer.onAudioPositionChanged.listen((event) {
+      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+        if(event == AudioPlayerState.COMPLETED){
+          AudioServiceBackground.sendCustomEvent(-1);
+          print(event);
+        }
+      });
+      audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
         AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
       });
     }
@@ -92,6 +102,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onSkipToPrevious() async {
+    print('OnSkipToPrevious');
     dynamic song = allSongs[Random.secure().nextInt(allSongs.length)];
     AudioServiceBackground.sendCustomEvent(song[1]);
     int res = await playSong(song[1], audioPlayer);
@@ -100,7 +111,14 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
           controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
           processingState: AudioProcessingState.ready,
           playing: true);
-      audioPlayer.onAudioPositionChanged.listen((event) {
+      print(audioPlayer.state);
+      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+        if(event == AudioPlayerState.COMPLETED){
+          AudioServiceBackground.sendCustomEvent(-1);
+          print(event);
+        }
+      });
+      audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
         AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
       });
       AudioServiceBackground.setMediaItem(MediaItem(
@@ -114,6 +132,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onSkipToNext() async {
+    print('onSkipToNext');
     dynamic song = allSongs[Random.secure().nextInt(allSongs.length)];
     AudioServiceBackground.sendCustomEvent(song[1]);
     int res = await playSong(song[1], audioPlayer);
@@ -122,7 +141,14 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
           controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
           processingState: AudioProcessingState.ready,
           playing: true);
-      audioPlayer.onAudioPositionChanged.listen((event) {
+      print(audioPlayer.state);
+      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+        if(event == AudioPlayerState.COMPLETED){
+          AudioServiceBackground.sendCustomEvent(-1);
+          print(event);
+        }
+      });
+      audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
         AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
       });
       AudioServiceBackground.setMediaItem(MediaItem(
@@ -136,17 +162,21 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onSeekTo(Duration position) {
+    print('onSeekTo');
     seek(audioPlayer, duration: position.inSeconds);
   }
 
   @override
-  Future<Function> onStop() {
-    audioPlayer.stop();
-    AudioServiceBackground.setState(
-        controls: [],
-        processingState: AudioProcessingState.none,
-        playing: false);
-    return super.onStop();
+  Future<void> onStop() async {
+    print('onStop');
+    audioPlayer.dispose();
+    await super.onStop();
+  }
+
+
+  @override
+  void onClose() async {
+    onStop();
   }
 
   @override
@@ -183,5 +213,11 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         // TODO: Handle this case.
         break;
     }
+  }
+
+  @override
+  void onTaskRemoved() {
+    onStop();
+    super.onTaskRemoved();
   }
 }

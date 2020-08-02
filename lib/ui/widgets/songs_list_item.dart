@@ -43,7 +43,7 @@ class _SongsListItemState extends State<SongsListItem> {
         subtitle: Text(widget.songInfo.artist),
         trailing: Consumer<MusicFinder>(
           builder: (context, value, child) => Icon(
-            value.isPlaying && widget.songInfo.id == value.currentlyPlaying.id
+            value.isPlaying && widget.songInfo.id == value.currentlyPlaying?.id
                 ? Icons.pause
                 : Icons.play_arrow,
             size: 26.0,
@@ -54,6 +54,9 @@ class _SongsListItemState extends State<SongsListItem> {
   }
 
   playMediaItem(BuildContext context) async {
+    if(!AudioService.connected){
+      await AudioService.connect();
+    }
     if (AudioService.running) {
       var artUri = widget.songInfo.albumArtwork != null ? File(widget.songInfo.albumArtwork).uri.toString() : 'https://via.placeholder.com/1080x1080?text=Album+Art';
       await AudioService.playMediaItem(MediaItem(
@@ -62,7 +65,6 @@ class _SongsListItemState extends State<SongsListItem> {
           title: widget.songInfo.title,
           artist: widget.songInfo.artist,
           artUri: artUri));
-//      _handleCustomEvents();
     } else {
       await start(context);
       playMediaItem(context);
@@ -87,7 +89,14 @@ class _SongsListItemState extends State<SongsListItem> {
       },
       androidNotificationChannelName: 'Random Music Player',
       androidNotificationColor: Theme.of(context).primaryColor.value,
+      androidStopForegroundOnPause: true,
       androidNotificationClickStartsActivity: true);
+
+  @override
+  void initState() {
+    super.initState();
+
+  }
 }
 
 _entryPoint() => AudioServiceBackground.run(() => BackgroundMusicHandler());

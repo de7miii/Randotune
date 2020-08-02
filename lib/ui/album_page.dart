@@ -31,7 +31,7 @@ class AlbumPage extends StatelessWidget {
                   maxChildSize: 0.2,
                   minChildSize: 0.2,
                   builder: (context, scrollController) {
-                    return MusicPlayer();
+                    return musicModel.musicPlayer;
                   },
                 ),
               ],
