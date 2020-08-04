@@ -1,5 +1,3 @@
-import 'dart:ffi';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
@@ -11,6 +9,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   AudioPlayer audioPlayer;
   List<dynamic> allSongs = [];
   Duration position;
+  List<MediaItem> _queue = [];
 
   @override
   void onStart(Map<String, dynamic> params) {
@@ -20,45 +19,97 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     super.onStart(params);
   }
 
+  MediaItem getRandomSong(List<MediaItem> queue) {
+    queue.shuffle(Random.secure());
+    return queue[Random.secure().nextInt(queue.length)];
+  }
+
+  MediaItem getMediaItemFromSong(dynamic song) => MediaItem(
+      id: song[0], // song id
+      genre: song[1], // filePath
+      album: song[2], // album name
+      title: song[3], // song title
+      artist: song[4], // artist name
+      artUri: song[5]); // album artwork
+
+  List<MediaItem> generateQueue(List<dynamic> allSongs){
+    List<MediaItem> queue = [];
+    if(allSongs != null && allSongs.isNotEmpty){
+      allSongs..shuffle(Random.secure())..forEach((element) {
+        if(queue.length < allSongs.length){
+          queue.add(getMediaItemFromSong(element));
+        }
+      });
+    }
+    assert(queue.isNotEmpty);
+    return queue;
+  }
+
   @override
   void onPlay() async {
     print('onPlay');
-    if (audioPlayer.state == AudioPlayerState.PAUSED) {
-      resumeSong(audioPlayer);
-      AudioServiceBackground.setState(
-          controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
-          processingState: AudioProcessingState.ready,
-          playing: true);
-    } else {
-      AudioServiceBackground.setState(
-          controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
-          processingState: AudioProcessingState.connecting,
-          playing: false);
-      dynamic song = allSongs[Random.secure().nextInt(allSongs.length)];
-      AudioServiceBackground.sendCustomEvent(song[1]);
-      int res = await playSong(song[1], audioPlayer);
-      if (res == 1) {
-        audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-          if(event == AudioPlayerState.COMPLETED){
-            AudioServiceBackground.sendCustomEvent(-1);
-            print(event);
-          }
-        });
-        audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
-          AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
-        });
+    if(_queue.isEmpty) {
+      if (audioPlayer.state == AudioPlayerState.PAUSED) {
+        resumeSong(audioPlayer);
         AudioServiceBackground.setState(
             controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
             processingState: AudioProcessingState.ready,
             playing: true);
-        AudioServiceBackground.setMediaItem(MediaItem(
-            id: song[0],
-            album: song[2],
-            title: song[3],
-            artist: song[4],
-            artUri: song[5]));
+      } else {
+        AudioServiceBackground.setState(
+            controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
+            processingState: AudioProcessingState.connecting,
+            playing: false);
+        _queue = generateQueue(allSongs);
+        MediaItem song = getRandomSong(_queue);
+        AudioServiceBackground.sendCustomEvent(song.genre);
+        int res = await playSong(song.genre, audioPlayer);
+        if (res == 1) {
+          audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
+            AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
+          });
+          AudioServiceBackground.setState(
+              controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+              processingState: AudioProcessingState.ready,
+              playing: true);
+          AudioServiceBackground.setMediaItem(song);
+        }
+      }
+    } else {
+      if (audioPlayer.state == AudioPlayerState.PAUSED) {
+        resumeSong(audioPlayer);
+        AudioServiceBackground.setState(
+            controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+            processingState: AudioProcessingState.ready,
+            playing: true);
+      } else {
+        AudioServiceBackground.setState(
+            controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
+            processingState: AudioProcessingState.connecting,
+            playing: false);
+        MediaItem song = getRandomSong(_queue);
+        AudioServiceBackground.sendCustomEvent(song.genre);
+        int res = await playSong(song.genre, audioPlayer);
+        if (res == 1) {
+          audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((
+              event) {
+            AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
+          });
+          AudioServiceBackground.setState(
+              controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+              processingState: AudioProcessingState.ready,
+              playing: true);
+          AudioServiceBackground.setMediaItem(song);
+        }
       }
     }
+    audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+      if(event == AudioPlayerState.COMPLETED){
+        AudioServiceBackground.sendCustomEvent(-1);
+        print(event);
+        skipToNextAndPrevious();
+      }
+    });
   }
 
   @override
@@ -79,16 +130,10 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   @override
   void onPlayMediaItem(MediaItem mediaItem) async {
     print('onPlayMediaItem');
-    AudioServiceBackground.sendCustomEvent(mediaItem.id);
-    int res = await playSong(mediaItem.id, audioPlayer);
+    AudioServiceBackground.sendCustomEvent(mediaItem.genre);
+    int res = await playSong(mediaItem.genre, audioPlayer);
     if (res == 1) {
       print(audioPlayer.state);
-      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-        if(event == AudioPlayerState.COMPLETED){
-          AudioServiceBackground.sendCustomEvent(-1);
-          print(event);
-        }
-      });
       audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
         AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
       });
@@ -98,65 +143,72 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         processingState: AudioProcessingState.ready,
         playing: true);
     AudioServiceBackground.setMediaItem(mediaItem);
+    audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+      if(event == AudioPlayerState.COMPLETED){
+        AudioServiceBackground.sendCustomEvent(-1);
+        print(event);
+        skipToNextAndPrevious();
+      }
+    });
   }
 
   @override
   void onSkipToPrevious() async {
     print('OnSkipToPrevious');
-    dynamic song = allSongs[Random.secure().nextInt(allSongs.length)];
-    AudioServiceBackground.sendCustomEvent(song[1]);
-    int res = await playSong(song[1], audioPlayer);
-    if (res == 1) {
-      AudioServiceBackground.setState(
-          controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
-          processingState: AudioProcessingState.ready,
-          playing: true);
-      print(audioPlayer.state);
-      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-        if(event == AudioPlayerState.COMPLETED){
-          AudioServiceBackground.sendCustomEvent(-1);
-          print(event);
-        }
-      });
-      audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
-        AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
-      });
-      AudioServiceBackground.setMediaItem(MediaItem(
-          id: song[0],
-          album: song[2],
-          title: song[3],
-          artist: song[4],
-          artUri: song[5]));
-    }
+    skipToNextAndPrevious();
+    audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+      if(event == AudioPlayerState.COMPLETED){
+        AudioServiceBackground.sendCustomEvent(-1);
+        print(event);
+        skipToNextAndPrevious();
+      }
+    });
   }
 
   @override
   void onSkipToNext() async {
     print('onSkipToNext');
-    dynamic song = allSongs[Random.secure().nextInt(allSongs.length)];
-    AudioServiceBackground.sendCustomEvent(song[1]);
-    int res = await playSong(song[1], audioPlayer);
-    if (res == 1) {
-      AudioServiceBackground.setState(
-          controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
-          processingState: AudioProcessingState.ready,
-          playing: true);
-      print(audioPlayer.state);
-      audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-        if(event == AudioPlayerState.COMPLETED){
-          AudioServiceBackground.sendCustomEvent(-1);
-          print(event);
-        }
-      });
-      audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
-        AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
-      });
-      AudioServiceBackground.setMediaItem(MediaItem(
-          id: song[0],
-          album: song[2],
-          title: song[3],
-          artist: song[4],
-          artUri: song[5]));
+    skipToNextAndPrevious();
+    audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
+      if(event == AudioPlayerState.COMPLETED){
+        AudioServiceBackground.sendCustomEvent(-1);
+        print(event);
+        skipToNextAndPrevious();
+      }
+    });
+  }
+
+  skipToNextAndPrevious() async{
+    if(_queue.isEmpty){
+      _queue = generateQueue(allSongs);
+      MediaItem song = getRandomSong(_queue);
+      AudioServiceBackground.sendCustomEvent(song.genre);
+      int res = await playSong(song.genre, audioPlayer);
+      if (res == 1) {
+        AudioServiceBackground.setState(
+            controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+            processingState: AudioProcessingState.ready,
+            playing: true);
+        print(audioPlayer.state);
+        audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
+          AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
+        });
+        AudioServiceBackground.setMediaItem(song);
+      }
+    }else {
+      MediaItem song = getRandomSong(_queue);
+      AudioServiceBackground.sendCustomEvent(song.genre);
+      int res = await playSong(song.genre, audioPlayer);
+      if (res == 1) {
+        AudioServiceBackground.setState(
+            controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+            processingState: AudioProcessingState.ready,
+            playing: true);
+        audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
+          AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
+        });
+        AudioServiceBackground.setMediaItem(song);
+      }
     }
   }
 
@@ -183,16 +235,16 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   void onAudioFocusLost(AudioInterruption interruption) {
     switch(interruption){
       case AudioInterruption.pause:
-        // TODO: Handle this case.
+        onPause();
         break;
       case AudioInterruption.temporaryPause:
-        // TODO: Handle this case.
+        onPause();
         break;
       case AudioInterruption.temporaryDuck:
-        // TODO: Handle this case.
+        audioPlayer.setVolume(0.5);
         break;
       case AudioInterruption.unknownPause:
-        // TODO: Handle this case.
+        onPause();
         break;
     }
   }
@@ -201,16 +253,16 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   void onAudioFocusGained(AudioInterruption interruption) {
     switch(interruption){
       case AudioInterruption.pause:
-        // TODO: Handle this case.
+        onPlay();
         break;
       case AudioInterruption.temporaryPause:
-        // TODO: Handle this case.
+        onPlay();
         break;
       case AudioInterruption.temporaryDuck:
-        // TODO: Handle this case.
+        audioPlayer.setVolume(1.0);
         break;
       case AudioInterruption.unknownPause:
-        // TODO: Handle this case.
+        onPlay();
         break;
     }
   }

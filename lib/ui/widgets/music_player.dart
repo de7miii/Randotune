@@ -304,6 +304,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
       androidNotificationChannelName: 'Random Music Player',
       androidNotificationColor: Theme.of(context).primaryColor.value,
       androidStopForegroundOnPause: true,
+      androidEnableQueue: true,
       androidNotificationClickStartsActivity: true);
 
   _handleCustomEvents() async {
@@ -355,6 +356,21 @@ class _MusicPlayerState extends State<MusicPlayer> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     print('music player did change dependencies');
+    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
+    if(AudioService.connected){
+      if(AudioService.running){
+        if (AudioService.playbackState.playing) {
+          AudioService.currentMediaItemStream.listen((event) {
+            if (event.id != musicModel.currentlyPlaying?.id) {
+              musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+                      (element) => element.id == AudioService.currentMediaItem.id);
+              musicModel.currentSongDuration =
+                  int.parse(musicModel.currentlyPlaying.duration);
+            }
+          });
+        }
+      }
+    }
   }
 
   @override

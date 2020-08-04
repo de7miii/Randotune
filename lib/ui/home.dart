@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -50,7 +51,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   PermissionStatus permissionStatus;
   @override
   Widget build(BuildContext context) {
@@ -75,14 +76,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
                             return GestureDetector(
                               onTap: () {
                                 Provider.of<MusicFinder>(context, listen: false)
-                                    .findAlbumSongs(album: value.allAlbums[index]);
-                                Navigator.pushNamed(context, '/album_page').then((ret) {
-                                    print('popped back to home');
-                                    Future.delayed(Duration(milliseconds: 500), (){
-                                      if(!AudioService.connected) {
-                                        AudioService.connect();
-                                      }
-                                    });
+                                    .findAlbumSongs(
+                                        album: value.allAlbums[index]);
+                                Navigator.pushNamed(context, '/album_page')
+                                    .then((ret) {
+                                  print('popped back to home');
+                                  Future.delayed(Duration(milliseconds: 500),
+                                      () {
+                                    if (!AudioService.connected) {
+                                      AudioService.connect();
+                                    }
+                                  });
                                 });
                               },
                               child: AlbumListItem(
@@ -101,9 +105,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
                     minChildSize: 0.2,
                     expand: true,
                     builder: (context, scrollController) {
-                      return !value.isLoading
-                          ? value.musicPlayer
-                          : null;
+                      return !value.isLoading ? value.musicPlayer : null;
                     },
                   ),
                 ],
@@ -120,15 +122,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     print('home page init state');
-    if(permissionStatus?.isGranted ?? false) {
-      Provider.of<MusicFinder>(context, listen: false).findAllSongs();
-      Provider.of<MusicFinder>(context, listen: false).findAllAlbums();
+    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
+    if (permissionStatus?.isGranted ?? false) {
+      if(musicModel.allSongs.isEmpty) {
+        musicModel.findAllSongs();
+        musicModel.findAllAlbums();
+      }
     } else {
       Permission.storage.request().then((status) {
         permissionStatus = status;
         if (status.isGranted) {
-          Provider.of<MusicFinder>(context, listen: false).findAllSongs();
-          Provider.of<MusicFinder>(context, listen: false).findAllAlbums();
+          if(musicModel.allSongs.isEmpty) {
+            musicModel.findAllSongs();
+            musicModel.findAllAlbums();
+          }
         }
       }, onError: (err) {
         print(err);
@@ -140,6 +147,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
   void didChangeDependencies() {
     super.didChangeDependencies();
     print('home page did change dependencies');
+    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
+    if(AudioService.connected){
+      if(AudioService.running){
+        if (AudioService.playbackState.playing) {
+          AudioService.currentMediaItemStream.listen((event) {
+            if (event.id != musicModel.currentlyPlaying.id) {
+              musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+                      (element) => element.id == AudioService.currentMediaItem.id);
+              musicModel.currentSongDuration =
+                  int.parse(musicModel.currentlyPlaying.duration);
+            }
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -168,14 +190,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
     print('home page deactivate');
   }
 
+  StreamSubscription sub;
+
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     print(state);
-    switch(state){
+    switch (state) {
       case AppLifecycleState.resumed:
-        print(Provider.of<MusicFinder>(context, listen: false).musicPlayer.createElement().dirty);
-        if(Provider.of<MusicFinder>(context, listen: false).musicPlayer.createElement().dirty){
-          Provider.of<MusicFinder>(context, listen: false).musicPlayer.createElement().markNeedsBuild();
+        if (musicModel.musicPlayer.createElement().dirty) {
+          musicModel.musicPlayer.createElement().markNeedsBuild();
+        }
+        if (!AudioService.connected) {
+          AudioService.connect();
+        }
+        if (AudioService.running) {
+          if (AudioService.playbackState.playing) {
+            AudioService.currentMediaItemStream.listen((event) {
+              if (event.id != musicModel.currentlyPlaying.id) {
+                musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+                    (element) => element.id == AudioService.currentMediaItem.id);
+                musicModel.currentSongDuration =
+                    int.parse(musicModel.currentlyPlaying.duration);
+              }
+            });
+          }
         }
         break;
       case AppLifecycleState.inactive:
@@ -183,7 +222,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
         break;
       case AppLifecycleState.paused:
         print('activity now is paused');
-        AudioService.customEventStream.listen((event) {
+        sub = AudioService.customEventStream.listen((event) {
           if (event is int) {
             if (event == -1) {
               print('song completed');
@@ -192,7 +231,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver{
         });
         break;
       case AppLifecycleState.detached:
-        // TODO: Handle this case.
+        sub?.cancel();
         break;
     }
   }

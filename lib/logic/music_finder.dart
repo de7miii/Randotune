@@ -77,7 +77,7 @@ class MusicFinder with ChangeNotifier {
   findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) {
     _isLoading = true;
     aq.getSongs(sortType: sortType).then((songsList) {
-      _allSongs = songsList;
+      _allSongs = songsList.where((element) => element.isMusic).toList();
       _isLoading = false;
       notifyListeners();
     }, onError: (err) {

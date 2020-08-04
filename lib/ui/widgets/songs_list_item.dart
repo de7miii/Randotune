@@ -60,7 +60,8 @@ class _SongsListItemState extends State<SongsListItem> {
     if (AudioService.running) {
       var artUri = widget.songInfo.albumArtwork != null ? File(widget.songInfo.albumArtwork).uri.toString() : 'https://via.placeholder.com/1080x1080?text=Album+Art';
       await AudioService.playMediaItem(MediaItem(
-          id: widget.songInfo.filePath,
+          id: widget.songInfo.id,
+          genre: widget.songInfo.filePath,
           album: widget.songInfo.album,
           title: widget.songInfo.title,
           artist: widget.songInfo.artist,
