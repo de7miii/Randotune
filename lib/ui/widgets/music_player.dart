@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -42,7 +41,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
             decoration: BoxDecoration(
                 color: value.currentlyPlaying == null ||
                         value.currentlyPlaying.albumArtwork == null
-                    ? Colors.indigo.shade900.withAlpha(240)
+                    ? Theme.of(context).primaryColor.withAlpha(240)
                     : null,
                 gradient: value.currentlyPlaying != null &&
                         value.currentlyPlaying.albumArtwork != null
@@ -50,9 +49,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                            Colors.indigo.shade900.withAlpha(255),
-                            Colors.indigo.shade700.withAlpha(155),
-                            Colors.indigo.withAlpha(125),
+                            Theme.of(context).primaryColor.withAlpha(255),
+                            Theme.of(context).primaryColor.withAlpha(170),
+                            Theme.of(context).primaryColor.withAlpha(155),
                           ])
                     : null,
                 borderRadius: BorderRadius.only(
@@ -77,16 +76,15 @@ class _MusicPlayerState extends State<MusicPlayer> {
                             children: <Widget>[
                               IconButton(
                                 onPressed: () {
-                                  if (value.currentSongPosition == 0 ||
-                                      value.currentSongPosition < 5000.0) {
-                                    print(value.currentSongPosition);
-                                    print('skip to previous 1');
-                                    skipToPrevious();
-                                    print('skip to previous 2');
-                                  } else {
-                                    print(value.currentSongPosition);
-                                    seek(0);
-                                    print('skip to previous 3');
+                                  if (value.allSongs.isNotEmpty) {
+                                    if (value.currentSongPosition == 0 ||
+                                        value.currentSongPosition < 5000.0) {
+                                      print(value.currentSongPosition);
+                                      skipToPrevious();
+                                    } else {
+                                      print(value.currentSongPosition);
+                                      seek(0);
+                                    }
                                   }
                                 },
                                 icon: Icon(
@@ -102,10 +100,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  if (value.isPlaying) {
-                                    pause();
-                                  } else {
-                                    play();
+                                  if (value.allSongs.isNotEmpty) {
+                                    if (value.isPlaying) {
+                                      pause();
+                                    } else {
+                                      play();
+                                    }
                                   }
                                 },
                                 icon: !value.isPlaying
@@ -125,7 +125,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  skipToNext();
+                                  if (value.allSongs.isNotEmpty) {
+                                    skipToNext();
+                                  }
                                 },
                                 icon: Icon(
                                   Icons.skip_next,
@@ -304,25 +306,25 @@ class _MusicPlayerState extends State<MusicPlayer> {
       androidNotificationChannelName: 'Random Music Player',
       androidNotificationColor: Theme.of(context).primaryColor.value,
       androidStopForegroundOnPause: true,
-      androidEnableQueue: true,
+      androidNotificationIcon: 'drawable/ic_notification',
       androidNotificationClickStartsActivity: true);
 
   _handleCustomEvents() async {
-      AudioService.customEventStream.listen((event) {
-        if (event is String) {
-          var currentSong = musicModel.allSongs
-              .where((element) => element.filePath == event)
-              .reduce((value, element) => element);
-          musicModel.currentlyPlaying = currentSong;
-          musicModel.currentSongDuration = int.parse(currentSong.duration);
-        } else if (event is int) {
-          if (event == -1) {
-            print('song completed');
-          } else {
-            musicModel.currentSongPosition = event;
-          }
+    AudioService.customEventStream.listen((event) {
+      if (event is String) {
+        var currentSong = musicModel.allSongs
+            .where((element) => element.filePath == event)
+            .reduce((value, element) => element);
+        musicModel.currentlyPlaying = currentSong;
+        musicModel.currentSongDuration = int.parse(currentSong.duration);
+      } else if (event is int) {
+        if (event == -1) {
+          print('song completed');
+        } else {
+          musicModel.currentSongPosition = event;
         }
-      });
+      }
+    });
   }
 
   @override
@@ -331,7 +333,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
     print('music player init state');
     _handleCustomEvents();
     AudioService.playbackStateStream.listen((event) {
-      if(!AudioService.connected){
+      if (!AudioService.connected) {
         AudioService.connect();
         print(event.playing);
         if (event.playing) {
@@ -339,7 +341,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
         } else {
           musicModel.isPlaying = false;
         }
-      }else {
+      } else {
         if (AudioService.running) {
           print(event.playing);
           if (event.playing) {
@@ -357,13 +359,13 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.didChangeDependencies();
     print('music player did change dependencies');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    if(AudioService.connected){
-      if(AudioService.running){
+    if (AudioService.connected) {
+      if (AudioService.running) {
         if (AudioService.playbackState.playing) {
           AudioService.currentMediaItemStream.listen((event) {
-            if (event.id != musicModel.currentlyPlaying?.id) {
+            if (event?.id != musicModel.currentlyPlaying?.id) {
               musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                      (element) => element.id == AudioService.currentMediaItem.id);
+                  (element) => element.id == AudioService.currentMediaItem.id);
               musicModel.currentSongDuration =
                   int.parse(musicModel.currentlyPlaying.duration);
             }

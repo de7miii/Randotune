@@ -322,13 +322,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.9.3"
-  storage_path:
-    dependency: "direct main"
-    description:
-      name: storage_path
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.2.0"
   stream_channel:
     dependency: transitive
     description:

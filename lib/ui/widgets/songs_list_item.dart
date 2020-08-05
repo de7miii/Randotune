@@ -24,7 +24,11 @@ class _SongsListItemState extends State<SongsListItem> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        playMediaItem(context);
+        if(Provider.of<MusicFinder>(context, listen: false).allSongs.isNotEmpty){
+          playMediaItem(context);
+        }else{
+          Scaffold.of(context).showSnackBar(SnackBar(content: Text('Please wait while your songs being loaded.'), duration: Duration(seconds: 2),));
+        }
       },
       child: ListTile(
         leading: widget.songInfo.track != null &&
@@ -91,6 +95,7 @@ class _SongsListItemState extends State<SongsListItem> {
       androidNotificationChannelName: 'Random Music Player',
       androidNotificationColor: Theme.of(context).primaryColor.value,
       androidStopForegroundOnPause: true,
+      androidNotificationIcon: 'drawable/ic_notification',
       androidNotificationClickStartsActivity: true);
 
   @override

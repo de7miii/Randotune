@@ -1,19 +1,15 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:isolate';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
-import 'package:random_music_player/ui/widgets/music_player.dart';
-import 'package:tuple/tuple.dart';
+import 'package:random_music_player/utils/app_theme.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -21,20 +17,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => MusicFinder(),
       child: MaterialApp(
-        theme: ThemeData(
-          primaryColor: Colors.indigo,
-          primaryColorDark: Colors.indigo.shade800,
-          primaryColorLight: Colors.indigo.shade200,
-          accentColor: Colors.deepOrange,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          sliderTheme: SliderThemeData(
-              activeTrackColor: Theme.of(context).primaryColorDark,
-              inactiveTrackColor: Theme.of(context).primaryColorLight,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0),
-              thumbColor: Theme.of(context).primaryColorDark,
-              overlayShape: RoundSliderOverlayShape(overlayRadius: 8.0),
-              trackHeight: 2.0),
-        ),
+        theme: appTheme,
         initialRoute: '/',
         routes: {
           '/': (context) => AudioServiceWidget(child: HomePage()),
@@ -58,7 +41,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: Text('RandoTron'),
-        centerTitle: true,
       ),
       body: Container(
         child: SafeArea(
@@ -105,7 +87,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     minChildSize: 0.2,
                     expand: true,
                     builder: (context, scrollController) {
-                      return !value.isLoading ? value.musicPlayer : null;
+                      return !value.isLoading && value.allSongs.isNotEmpty
+                          ? value.musicPlayer
+                          : null;
                     },
                   ),
                 ],
@@ -124,17 +108,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print('home page init state');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     if (permissionStatus?.isGranted ?? false) {
-      if(musicModel.allSongs.isEmpty) {
-        musicModel.findAllSongs();
-        musicModel.findAllAlbums();
+      if (musicModel.allAlbums.isEmpty && musicModel.allSongs.isEmpty) {
+        musicModel
+          ..findAllAlbums()
+          ..findAllSongs();
       }
     } else {
       Permission.storage.request().then((status) {
         permissionStatus = status;
         if (status.isGranted) {
-          if(musicModel.allSongs.isEmpty) {
-            musicModel.findAllSongs();
-            musicModel.findAllAlbums();
+          if (musicModel.allAlbums.isEmpty && musicModel.allSongs.isEmpty) {
+            musicModel
+              ..findAllAlbums()
+              ..findAllSongs();
           }
         }
       }, onError: (err) {
@@ -148,13 +134,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeDependencies();
     print('home page did change dependencies');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    if(AudioService.connected){
-      if(AudioService.running){
+    if (AudioService.connected) {
+      if (AudioService.running) {
         if (AudioService.playbackState.playing) {
           AudioService.currentMediaItemStream.listen((event) {
             if (event.id != musicModel.currentlyPlaying.id) {
               musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                      (element) => element.id == AudioService.currentMediaItem.id);
+                  (element) => element.id == AudioService.currentMediaItem.id);
               musicModel.currentSongDuration =
                   int.parse(musicModel.currentlyPlaying.duration);
             }
@@ -209,7 +195,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             AudioService.currentMediaItemStream.listen((event) {
               if (event.id != musicModel.currentlyPlaying.id) {
                 musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                    (element) => element.id == AudioService.currentMediaItem.id);
+                    (element) =>
+                        element.id == AudioService.currentMediaItem.id);
                 musicModel.currentSongDuration =
                     int.parse(musicModel.currentlyPlaying.duration);
               }

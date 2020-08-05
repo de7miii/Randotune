@@ -32,9 +32,9 @@ class AlbumListItem extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
-                Colors.indigo.shade900.withAlpha(255),
-                Colors.indigo.shade700.withAlpha(155),
-                Colors.indigo.withAlpha(90),
+                Theme.of(context).primaryColor.withAlpha(255),
+                Theme.of(context).primaryColor.withAlpha(155),
+                Theme.of(context).primaryColor.withAlpha(90),
               ], begin: Alignment.bottomCenter, end: Alignment.topCenter),
             ),
           ),

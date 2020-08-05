@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
 import 'package:random_music_player/ui/widgets/music_player.dart';
@@ -74,32 +73,37 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
-  findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) {
+  findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) async {
     _isLoading = true;
+    notifyListeners();
     aq.getSongs(sortType: sortType).then((songsList) {
       _allSongs = songsList.where((element) => element.isMusic).toList();
       _isLoading = false;
+      print('songs are loaded');
       notifyListeners();
     }, onError: (err) {
       print(err);
     });
   }
 
-  findAllAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) {
+  findAllAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) async {
     _isLoading = true;
+    notifyListeners();
     aq.getAlbums(sortType: sortType).then((albumList) {
       _allAlbums = albumList;
       _isLoading = false;
+      print('albums loaded');
       notifyListeners();
     }, onError: (err) {
       print(err);
     });
   }
 
-  findAlbumSongs({@required AlbumInfo album}) {
+  findAlbumSongs({@required AlbumInfo album}) async {
     assert(album != null);
     selectedAlbum = album;
     _isLoading = true;
+    notifyListeners();
     if (allSongs?.isNotEmpty ?? false) {
       _selectedAlbumSongs =
           allSongs.where((element) => element.albumId == album.id).toList();
@@ -121,7 +125,9 @@ class MusicFinder with ChangeNotifier {
     }
   }
 
-  findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) {
+  findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) async {
+    _isLoading = true;
+    notifyListeners();
     aq.getArtists(sortType: sortType).then((artistsList) {
       _allArtists = artistsList;
       _isLoading = false;
@@ -129,25 +135,5 @@ class MusicFinder with ChangeNotifier {
     }, onError: (err) {
       print(err);
     });
-  }
-
-  handleCustomEvents() {
-    AudioService.customEventStream.asBroadcastStream().listen((event) {
-      if (event is String) {
-        var currentSong = allSongs
-            .where((element) => element.filePath == event)
-            .reduce((value, element) => element);
-        currentlyPlaying = currentSong;
-        currentSongDuration = int.parse(currentSong.duration);
-      } else if (event is int) {
-        if (event == -1) {
-//          AudioService.skipToNext();
-          print('song completed');
-        } else {
-          print(event);
-          currentSongPosition = event;
-        }
-      }
-    }, cancelOnError: true);
   }
 }
