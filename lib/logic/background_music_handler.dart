@@ -221,6 +221,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   @override
   Future<void> onStop() async {
     print('onStop');
+    await audioPlayer.stop();
     audioPlayer.dispose();
     await super.onStop();
   }

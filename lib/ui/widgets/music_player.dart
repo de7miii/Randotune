@@ -24,8 +24,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(16.0),
-              topRight: Radius.circular(16.0),
+              topLeft: Radius.circular(8.0),
+              topRight: Radius.circular(8.0),
             ),
             child: value.currentlyPlaying != null &&
                     value.currentlyPlaying.albumArtwork != null
@@ -37,7 +37,6 @@ class _MusicPlayerState extends State<MusicPlayer> {
                 : null,
           ),
           Container(
-            height: MediaQuery.of(context).size.height * 0.175,
             decoration: BoxDecoration(
                 color: value.currentlyPlaying == null ||
                         value.currentlyPlaying.albumArtwork == null
@@ -55,8 +54,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
                           ])
                     : null,
                 borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16.0),
-                    topRight: Radius.circular(16.0))),
+                    topLeft: Radius.circular(8.0),
+                    topRight: Radius.circular(8.0))),
             child: Align(
               alignment: Alignment.topCenter,
               child: Column(
@@ -361,16 +360,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     if (AudioService.connected) {
       if (AudioService.running) {
-        if (AudioService.playbackState.playing) {
-          AudioService.currentMediaItemStream.listen((event) {
-            if (event?.id != musicModel.currentlyPlaying?.id) {
-              musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                  (element) => element.id == AudioService.currentMediaItem.id);
-              musicModel.currentSongDuration =
-                  int.parse(musicModel.currentlyPlaying.duration);
-            }
-          });
-        }
+        AudioService.currentMediaItemStream.listen((event) {
+          if (event?.id != musicModel.currentlyPlaying?.id || event?.title != musicModel.currentlyPlaying?.title) {
+            musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+                (element) => element?.id == AudioService?.currentMediaItem?.id);
+            musicModel.currentSongDuration =
+                int.parse(musicModel.currentlyPlaying.duration);
+          }
+        });
       }
     }
   }

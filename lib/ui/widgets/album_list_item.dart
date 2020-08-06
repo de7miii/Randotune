@@ -1,13 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_audio_query/flutter_audio_query.dart';
-import 'package:provider/provider.dart';
-import 'package:random_music_player/logic/music_finder.dart';
-import 'package:random_music_player/ui/album_page.dart';
+import 'package:random_music_player/utils/album_info.dart';
 
 class AlbumListItem extends StatelessWidget {
-  final AlbumInfo albumInfo;
+  final AlbumInfoLocal albumInfo;
   final String placeholderUrl =
       'https://via.placeholder.com/1080x1080?text=Album+Art';
 

@@ -4,16 +4,20 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/music_finder.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
+import 'package:random_music_player/utils/song_info.dart';
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(statusBarColor: Colors.transparent));
     return ChangeNotifierProvider(
       create: (_) => MusicFinder(),
       child: MaterialApp(
@@ -36,14 +40,24 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   PermissionStatus permissionStatus;
+  Box songsBox = Hive.box('songs');
+  Box albumsBox = Hive.box('albums');
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('RandoTron'),
-      ),
-      body: Container(
-        child: SafeArea(
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              title: Text('Randotune'),
+              floating: false,
+              pinned: false,
+              snap: false,
+            ),
+          ];
+        },
+        body: SafeArea(
+          top: false,
           child: Consumer<MusicFinder>(
             builder: (context, value, child) {
               return Stack(
@@ -81,16 +95,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       : Center(
                           child: CircularProgressIndicator(),
                         ),
-                  DraggableScrollableSheet(
-                    initialChildSize: 0.2,
-                    maxChildSize: 0.2,
-                    minChildSize: 0.2,
-                    expand: true,
-                    builder: (context, scrollController) {
-                      return !value.isLoading && value.allSongs.isNotEmpty
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.18,
+                      child: !value.isLoading || value.allSongs.isNotEmpty
                           ? value.musicPlayer
-                          : null;
-                    },
+                          : null,
+                    ),
                   ),
                 ],
               );
@@ -108,19 +120,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print('home page init state');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     if (permissionStatus?.isGranted ?? false) {
-      if (musicModel.allAlbums.isEmpty && musicModel.allSongs.isEmpty) {
+      if(songsBox.isOpen && albumsBox.isOpen){
+        print('boxes are open');
+        musicModel.allSongs = songsBox.get('allSongs');
+        musicModel.allAlbums = albumsBox.get('allAlbums');
+      }else {
         musicModel
-          ..findAllAlbums()
-          ..findAllSongs();
+          ..findAllSongs()
+          ..findAllAlbums();
       }
     } else {
       Permission.storage.request().then((status) {
         permissionStatus = status;
         if (status.isGranted) {
-          if (musicModel.allAlbums.isEmpty && musicModel.allSongs.isEmpty) {
+          if(songsBox.isOpen && albumsBox.isOpen){
+            print('boxes are open');
+            musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
+            musicModel.allAlbums = List.castFrom( albumsBox.get('allAlbums'));
+          }else {
             musicModel
-              ..findAllAlbums()
-              ..findAllSongs();
+              ..findAllSongs()
+              ..findAllAlbums();
           }
         }
       }, onError: (err) {

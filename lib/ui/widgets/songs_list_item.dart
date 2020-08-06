@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_audio_query/flutter_audio_query.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
+import 'package:random_music_player/utils/song_info.dart';
 
 class SongsListItem extends StatefulWidget {
-  final SongInfo songInfo;
+  final SongInfoLocal songInfo;
 
   SongsListItem({this.songInfo});
 
