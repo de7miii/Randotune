@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
@@ -358,18 +359,31 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.didChangeDependencies();
     print('music player did change dependencies');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    if (AudioService.connected) {
-      if (AudioService.running) {
-        AudioService.currentMediaItemStream.listen((event) {
-          if (event?.id != musicModel.currentlyPlaying?.id || event?.title != musicModel.currentlyPlaying?.title) {
-            musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                (element) => element?.id == AudioService?.currentMediaItem?.id);
-            musicModel.currentSongDuration =
-                int.parse(musicModel.currentlyPlaying.duration);
-          }
-        });
+    AudioService.currentMediaItemStream.listen((event) {
+      if (musicModel.currentlyPlaying == null) {
+        if (musicModel.allSongs.isEmpty) {
+          musicModel.allSongs =
+              List.castFrom(Hive.box('songs').get('allSongs'));
+        }
+        musicModel.currentlyPlaying =
+            musicModel.allSongs.firstWhere((element) => element?.id == event?.id);
+        print(musicModel.currentlyPlaying);
+        musicModel.currentSongDuration =
+            int.parse(musicModel.currentlyPlaying.duration);
       }
-    }
+      if (event?.id != musicModel.currentlyPlaying?.id ||
+          event?.title != musicModel.currentlyPlaying?.title) {
+        if (musicModel.allSongs.isEmpty) {
+          musicModel.allSongs =
+              List.castFrom(Hive.box('songs').get('allSongs'));
+        }
+        musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+            (element) => element?.id == AudioService?.currentMediaItem?.id);
+        musicModel.currentSongDuration =
+            int.parse(musicModel.currentlyPlaying.duration);
+        print(musicModel.currentlyPlaying);
+      }
+    });
   }
 
   @override

@@ -120,10 +120,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print('home page init state');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     if (permissionStatus?.isGranted ?? false) {
-      if(songsBox.isOpen && albumsBox.isOpen){
+      if( (songsBox.isOpen && albumsBox.isOpen) && (songsBox.containsKey('allSongs') && albumsBox.containsKey('allAlbums')) ){
         print('boxes are open');
-        musicModel.allSongs = songsBox.get('allSongs');
-        musicModel.allAlbums = albumsBox.get('allAlbums');
+        musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
+        musicModel.allAlbums = List.castFrom( albumsBox.get('allAlbums'));
       }else {
         musicModel
           ..findAllSongs()
@@ -133,7 +133,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       Permission.storage.request().then((status) {
         permissionStatus = status;
         if (status.isGranted) {
-          if(songsBox.isOpen && albumsBox.isOpen){
+          if((songsBox.isOpen && albumsBox.isOpen) && (songsBox.containsKey('allSongs') && albumsBox.containsKey('allAlbums'))){
             print('boxes are open');
             musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
             musicModel.allAlbums = List.castFrom( albumsBox.get('allAlbums'));
