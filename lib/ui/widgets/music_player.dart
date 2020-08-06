@@ -365,11 +365,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
           musicModel.allSongs =
               List.castFrom(Hive.box('songs').get('allSongs'));
         }
-        musicModel.currentlyPlaying =
-            musicModel.allSongs.firstWhere((element) => element?.id == event?.id);
-        print(musicModel.currentlyPlaying);
-        musicModel.currentSongDuration =
-            int.parse(musicModel.currentlyPlaying.duration);
+        if(musicModel.allSongs.any((element) => element?.id == event?.id)) {
+          musicModel.currentlyPlaying =
+              musicModel.allSongs.firstWhere((element) =>
+              element?.id == event?.id);
+          print(musicModel.currentlyPlaying);
+          musicModel.currentSongDuration =
+              int.parse(musicModel.currentlyPlaying.duration);
+        }
       }
       if (event?.id != musicModel.currentlyPlaying?.id ||
           event?.title != musicModel.currentlyPlaying?.title) {
@@ -377,11 +380,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
           musicModel.allSongs =
               List.castFrom(Hive.box('songs').get('allSongs'));
         }
-        musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-            (element) => element?.id == AudioService?.currentMediaItem?.id);
-        musicModel.currentSongDuration =
-            int.parse(musicModel.currentlyPlaying.duration);
-        print(musicModel.currentlyPlaying);
+        if(musicModel.allSongs.any((element) => element?.id == event?.id)) {
+          musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
+                  (element) =>
+              element?.id == AudioService?.currentMediaItem?.id);
+          musicModel.currentSongDuration =
+              int.parse(musicModel.currentlyPlaying.duration);
+          print(musicModel.currentlyPlaying);
+        }
       }
     });
   }

@@ -32,14 +32,16 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
       artist: song[4], // artist name
       artUri: song[5]); // album artwork
 
-  List<MediaItem> generateQueue(List<dynamic> allSongs){
+  List<MediaItem> generateQueue(List<dynamic> allSongs) {
     List<MediaItem> queue = [];
-    if(allSongs != null && allSongs.isNotEmpty){
-      allSongs..shuffle(Random.secure())..forEach((element) {
-        if(queue.length < allSongs.length){
-          queue.add(getMediaItemFromSong(element));
-        }
-      });
+    if (allSongs != null && allSongs.isNotEmpty) {
+      allSongs
+        ..shuffle(Random.secure())
+        ..forEach((element) {
+          if (queue.length < allSongs.length) {
+            queue.add(getMediaItemFromSong(element));
+          }
+        });
     }
     assert(queue.isNotEmpty);
     return queue;
@@ -48,7 +50,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   @override
   void onPlay() async {
     print('onPlay');
-    if(_queue.isEmpty) {
+    if (_queue.isEmpty) {
       if (audioPlayer.state == AudioPlayerState.PAUSED) {
         resumeSong(audioPlayer);
         AudioServiceBackground.setState(
@@ -65,7 +67,9 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         AudioServiceBackground.sendCustomEvent(song.genre);
         int res = await playSong(song.genre, audioPlayer);
         if (res == 1) {
-          audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((event) {
+          audioPlayer.onAudioPositionChanged
+              .asBroadcastStream()
+              .listen((event) {
             AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
           });
           AudioServiceBackground.setState(
@@ -91,8 +95,9 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         AudioServiceBackground.sendCustomEvent(song.genre);
         int res = await playSong(song.genre, audioPlayer);
         if (res == 1) {
-          audioPlayer.onAudioPositionChanged.asBroadcastStream().listen((
-              event) {
+          audioPlayer.onAudioPositionChanged
+              .asBroadcastStream()
+              .listen((event) {
             AudioServiceBackground.sendCustomEvent(event.inMilliseconds);
           });
           AudioServiceBackground.setState(
@@ -104,7 +109,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
       }
     }
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-      if(event == AudioPlayerState.COMPLETED){
+      if (event == AudioPlayerState.COMPLETED) {
         AudioServiceBackground.sendCustomEvent(-1);
         print(event);
         skipToNextAndPrevious();
@@ -144,7 +149,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         playing: true);
     AudioServiceBackground.setMediaItem(mediaItem);
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-      if(event == AudioPlayerState.COMPLETED){
+      if (event == AudioPlayerState.COMPLETED) {
         AudioServiceBackground.sendCustomEvent(-1);
         print(event);
         skipToNextAndPrevious();
@@ -157,7 +162,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     print('OnSkipToPrevious');
     skipToNextAndPrevious();
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-      if(event == AudioPlayerState.COMPLETED){
+      if (event == AudioPlayerState.COMPLETED) {
         AudioServiceBackground.sendCustomEvent(-1);
         print(event);
         skipToNextAndPrevious();
@@ -170,7 +175,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     print('onSkipToNext');
     skipToNextAndPrevious();
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
-      if(event == AudioPlayerState.COMPLETED){
+      if (event == AudioPlayerState.COMPLETED) {
         AudioServiceBackground.sendCustomEvent(-1);
         print(event);
         skipToNextAndPrevious();
@@ -178,8 +183,8 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     });
   }
 
-  skipToNextAndPrevious() async{
-    if(_queue.isEmpty){
+  skipToNextAndPrevious() async {
+    if (_queue.isEmpty) {
       _queue = generateQueue(allSongs);
       MediaItem song = getRandomSong(_queue);
       AudioServiceBackground.sendCustomEvent(song.genre);
@@ -195,7 +200,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         });
         AudioServiceBackground.setMediaItem(song);
       }
-    }else {
+    } else {
       MediaItem song = getRandomSong(_queue);
       AudioServiceBackground.sendCustomEvent(song.genre);
       int res = await playSong(song.genre, audioPlayer);
@@ -226,7 +231,6 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     await super.onStop();
   }
 
-
   @override
   void onClose() async {
     onStop();
@@ -234,7 +238,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onAudioFocusLost(AudioInterruption interruption) {
-    switch(interruption){
+    switch (interruption) {
       case AudioInterruption.pause:
         onPause();
         break;
@@ -252,7 +256,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onAudioFocusGained(AudioInterruption interruption) {
-    switch(interruption){
+    switch (interruption) {
       case AudioInterruption.pause:
         onPlay();
         break;
@@ -266,6 +270,48 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
         onPlay();
         break;
     }
+  }
+
+  @override
+  void onClick(MediaButton button) {
+    switch (button) {
+      case MediaButton.media:
+        print('media');
+        if (audioPlayer.state == AudioPlayerState.PLAYING) {
+          audioPlayer.pause();
+          AudioServiceBackground.setState(
+              controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
+              processingState: AudioProcessingState.ready,
+              playing: false);
+        } else if (audioPlayer.state == AudioPlayerState.PAUSED) {
+          audioPlayer.resume();
+          AudioServiceBackground.setState(
+              controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+              processingState: AudioProcessingState.ready,
+              playing: true);
+        }
+        break;
+      case MediaButton.next:
+        print('next');
+        skipToNextAndPrevious();
+        break;
+      case MediaButton.previous:
+        print('previous');
+        skipToNextAndPrevious();
+        break;
+    }
+  }
+
+  @override
+  void onAudioBecomingNoisy() {
+    if (audioPlayer.state == AudioPlayerState.PLAYING) {
+      audioPlayer.pause();
+      AudioServiceBackground.setState(
+          controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
+          processingState: AudioProcessingState.ready,
+          playing: false);
+    }
+    super.onAudioBecomingNoisy();
   }
 
   @override
