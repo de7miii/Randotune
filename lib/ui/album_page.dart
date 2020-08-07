@@ -27,12 +27,15 @@ class AlbumPage extends StatelessWidget {
                     StretchMode.zoomBackground,
                     StretchMode.fadeTitle
                   ],
-                  title: Text(
-                    musicModel.selectedAlbum.title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headline6
-                        .copyWith(color: Theme.of(context).accentColor),
+                  title: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      musicModel.selectedAlbum.title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headline6
+                          .copyWith(color: Theme.of(context).accentColor),
+                    ),
                   ),
                   background: Stack(
                     fit: StackFit.expand,

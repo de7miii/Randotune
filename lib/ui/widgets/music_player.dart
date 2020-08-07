@@ -56,9 +56,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                            Theme.of(context).primaryColor.withAlpha(155),
-                            Theme.of(context).primaryColor.withAlpha(170),
-                            Theme.of(context).primaryColor.withAlpha(255),
+                            Theme.of(context).primaryColor.withAlpha(185),
+                            Theme.of(context).primaryColor.withAlpha(185),
+                            Theme.of(context).primaryColor.withAlpha(240),
                           ])
                     : null,
                 borderRadius: BorderRadius.only(
