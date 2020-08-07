@@ -37,7 +37,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
                   )
                 : value.currentlyPlaying != null &&
                         value.currentlyPlaying.albumArtwork == null
-                    ? Image.asset('assets/images/vinyl_album.png', fit: BoxFit.cover, width: MediaQuery.of(context).size.width,)
+                    ? Image.asset(
+                        'assets/images/vinyl_album.png',
+                        fit: BoxFit.cover,
+                        width: MediaQuery.of(context).size.width,
+                      )
                     : null,
           ),
           Container(
@@ -52,9 +56,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                            Theme.of(context).primaryColor.withAlpha(255),
-                            Theme.of(context).primaryColor.withAlpha(170),
                             Theme.of(context).primaryColor.withAlpha(155),
+                            Theme.of(context).primaryColor.withAlpha(170),
+                            Theme.of(context).primaryColor.withAlpha(255),
                           ])
                     : null,
                 borderRadius: BorderRadius.only(

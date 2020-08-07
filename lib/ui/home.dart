@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
+import 'package:random_music_player/utils/search.dart';
 import 'package:random_music_player/utils/song_info.dart';
 
 class MyApp extends StatelessWidget {
@@ -49,10 +50,34 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return <Widget>[
             SliverAppBar(
-              title: Text('Randotune'),
-              floating: false,
+              title: Text(
+                'Randotune',
+                style: Theme.of(context)
+                    .textTheme
+                    .headline6
+                    .copyWith(color: Theme.of(context).accentColor),
+              ),
+              floating: true,
               pinned: false,
-              snap: false,
+              snap: true,
+              actions: <Widget>[
+                IconButton(
+                  onPressed: () {
+                    showSearch(
+                        context: context,
+                        delegate: Search(
+                            allAlbums:
+                                Provider.of<MusicFinder>(context, listen: false)
+                                        .allAlbums
+                                        .isEmpty
+                                    ? albumsBox.get('allAlbums', defaultValue: [])
+                                    : Provider.of<MusicFinder>(context,
+                                            listen: false)
+                                        .allAlbums));
+                  },
+                  icon: Icon(Icons.search),
+                )
+              ],
             ),
           ];
         },
@@ -120,11 +145,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print('home page init state');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
     if (permissionStatus?.isGranted ?? false) {
-      if( (songsBox.isOpen && albumsBox.isOpen) && (songsBox.containsKey('allSongs') && albumsBox.containsKey('allAlbums')) ){
+      if ((songsBox.isOpen && albumsBox.isOpen) &&
+          (songsBox.containsKey('allSongs') &&
+              albumsBox.containsKey('allAlbums'))) {
         print('boxes are open');
         musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
-        musicModel.allAlbums = List.castFrom( albumsBox.get('allAlbums'));
-      }else {
+        musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
+      } else {
         musicModel
           ..findAllSongs()
           ..findAllAlbums();
@@ -133,11 +160,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       Permission.storage.request().then((status) {
         permissionStatus = status;
         if (status.isGranted) {
-          if((songsBox.isOpen && albumsBox.isOpen) && (songsBox.containsKey('allSongs') && albumsBox.containsKey('allAlbums'))){
+          if ((songsBox.isOpen && albumsBox.isOpen) &&
+              (songsBox.containsKey('allSongs') &&
+                  albumsBox.containsKey('allAlbums'))) {
             print('boxes are open');
             musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
-            musicModel.allAlbums = List.castFrom( albumsBox.get('allAlbums'));
-          }else {
+            musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
+          } else {
             musicModel
               ..findAllSongs()
               ..findAllAlbums();
