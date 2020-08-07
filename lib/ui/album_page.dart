@@ -42,9 +42,7 @@ class AlbumPage extends StatelessWidget {
                               File(musicModel.selectedAlbum.albumArt),
                               fit: BoxFit.cover,
                             )
-                          : Container(
-                              color: Theme.of(context).primaryColor,
-                            ),
+                          : Image.asset('assets/images/vinyl_album.png'),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(

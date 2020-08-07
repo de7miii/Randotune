@@ -17,8 +17,6 @@ class SongsListItem extends StatefulWidget {
 }
 
 class _SongsListItemState extends State<SongsListItem> {
-  final String placeholderUrl =
-      'https://via.placeholder.com/1080x1080?text=Album+Art';
 
   @override
   Widget build(BuildContext context) {

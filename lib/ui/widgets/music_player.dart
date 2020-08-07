@@ -35,7 +35,10 @@ class _MusicPlayerState extends State<MusicPlayer> {
                     width: MediaQuery.of(context).size.width,
                     fit: BoxFit.cover,
                   )
-                : null,
+                : value.currentlyPlaying != null &&
+                        value.currentlyPlaying.albumArtwork == null
+                    ? Image.asset('assets/images/vinyl_album.png', fit: BoxFit.cover, width: MediaQuery.of(context).size.width,)
+                    : null,
           ),
           Container(
             decoration: BoxDecoration(
@@ -363,10 +366,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
           musicModel.allSongs =
               List.castFrom(Hive.box('songs').get('allSongs'));
         }
-        if(musicModel.allSongs.any((element) => element?.id == event?.id)) {
-          musicModel.currentlyPlaying =
-              musicModel.allSongs.firstWhere((element) =>
-              element?.id == event?.id);
+        if (musicModel.allSongs.any((element) => element?.id == event?.id)) {
+          musicModel.currentlyPlaying = musicModel.allSongs
+              .firstWhere((element) => element?.id == event?.id);
           print(musicModel.currentlyPlaying);
           musicModel.currentSongDuration =
               int.parse(musicModel.currentlyPlaying.duration);
@@ -378,10 +380,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
           musicModel.allSongs =
               List.castFrom(Hive.box('songs').get('allSongs'));
         }
-        if(musicModel.allSongs.any((element) => element?.id == event?.id)) {
+        if (musicModel.allSongs.any((element) => element?.id == event?.id)) {
           musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                  (element) =>
-              element?.id == AudioService?.currentMediaItem?.id);
+              (element) => element?.id == AudioService?.currentMediaItem?.id);
           musicModel.currentSongDuration =
               int.parse(musicModel.currentlyPlaying.duration);
           print(musicModel.currentlyPlaying);

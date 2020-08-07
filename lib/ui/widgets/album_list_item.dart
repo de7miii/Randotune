@@ -5,8 +5,6 @@ import 'package:random_music_player/utils/album_info.dart';
 
 class AlbumListItem extends StatelessWidget {
   final AlbumInfoLocal albumInfo;
-  final String placeholderUrl =
-      'https://via.placeholder.com/1080x1080?text=Album+Art';
 
   AlbumListItem({this.albumInfo});
 
@@ -25,7 +23,7 @@ class AlbumListItem extends StatelessWidget {
               ? Image.file(
             File(albumInfo.albumArt),
           )
-              : Image.network(placeholderUrl),
+              : Image.asset('assets/images/vinyl_album.png'),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
