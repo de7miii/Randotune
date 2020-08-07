@@ -94,7 +94,7 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
-  findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) async {
+  findAllSongs({SongSortType sortType = SongSortType.SMALLER_TRACK_NUMBER}) async {
     _isLoading = true;
     notifyListeners();
     aq.getSongs(sortType: sortType).then((songsList) {

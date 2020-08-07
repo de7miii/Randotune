@@ -160,7 +160,13 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   @override
   void onSkipToPrevious() async {
     print('OnSkipToPrevious');
-    skipToNextAndPrevious();
+    audioPlayer.getCurrentPosition().then((value)  {
+      if(value == 0 || value < 5000){
+        skipToNextAndPrevious();
+      }else {
+        onSeekTo(Duration(seconds: 0));
+      }
+    });
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
       if (event == AudioPlayerState.COMPLETED) {
         AudioServiceBackground.sendCustomEvent(-1);

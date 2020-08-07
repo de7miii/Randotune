@@ -24,10 +24,15 @@ class _SongsListItemState extends State<SongsListItem> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if(Provider.of<MusicFinder>(context, listen: false).allSongs.isNotEmpty){
+        if (Provider.of<MusicFinder>(context, listen: false)
+            .allSongs
+            .isNotEmpty) {
           playMediaItem(context);
-        }else{
-          Scaffold.of(context).showSnackBar(SnackBar(content: Text('Please wait while your songs being loaded.'), duration: Duration(seconds: 2),));
+        } else {
+          Scaffold.of(context).showSnackBar(SnackBar(
+            content: Text('Please wait while your songs being loaded.'),
+            duration: Duration(seconds: 2),
+          ));
         }
       },
       child: ListTile(
@@ -36,7 +41,12 @@ class _SongsListItemState extends State<SongsListItem> {
                 int.parse(widget.songInfo.track) > 0
             ? Text(
                 widget.songInfo.track.length == 4
-                    ? int.parse(widget.songInfo.track) > 1009
+                    ? int.parse(widget.songInfo.track) > 1009 &&
+                                int.parse(widget.songInfo.track) < 2000 ||
+                            int.parse(widget.songInfo.track) > 2009 &&
+                                int.parse(widget.songInfo.track) < 3000 ||
+                            int.parse(widget.songInfo.track) > 3009 &&
+                                int.parse(widget.songInfo.track) < 4000
                         ? widget.songInfo.track.substring(2)
                         : widget.songInfo.track.substring(3)
                     : widget.songInfo.track,
@@ -58,11 +68,13 @@ class _SongsListItemState extends State<SongsListItem> {
   }
 
   playMediaItem(BuildContext context) async {
-    if(!AudioService.connected){
+    if (!AudioService.connected) {
       await AudioService.connect();
     }
     if (AudioService.running) {
-      var artUri = widget.songInfo.albumArtwork != null ? File(widget.songInfo.albumArtwork).uri.toString() : 'https://via.placeholder.com/1080x1080?text=Album+Art';
+      var artUri = widget.songInfo.albumArtwork != null
+          ? File(widget.songInfo.albumArtwork).uri.toString()
+          : 'https://via.placeholder.com/1080x1080?text=Album+Art';
       await AudioService.playMediaItem(MediaItem(
           id: widget.songInfo.id,
           genre: widget.songInfo.filePath,
@@ -79,17 +91,18 @@ class _SongsListItemState extends State<SongsListItem> {
   start(BuildContext context) => AudioService.start(
       backgroundTaskEntrypoint: _entryPoint,
       params: {
-        'allSongs': Provider.of<MusicFinder>(context, listen: false).allSongs
+        'allSongs': Provider.of<MusicFinder>(context, listen: false)
+            .allSongs
             .map((e) => [
-          e.id,
-          e.filePath,
-          e.album,
-          e.title,
-          e.artist,
-          e.albumArtwork != null
-              ? File(e.albumArtwork).uri.toString()
-              : 'https://via.placeholder.com/1080x1080?text=Album+Art'
-        ])
+                  e.id,
+                  e.filePath,
+                  e.album,
+                  e.title,
+                  e.artist,
+                  e.albumArtwork != null
+                      ? File(e.albumArtwork).uri.toString()
+                      : 'https://via.placeholder.com/1080x1080?text=Album+Art'
+                ])
             .toList()
       },
       androidNotificationChannelName: 'Random Music Player',
@@ -101,7 +114,6 @@ class _SongsListItemState extends State<SongsListItem> {
   @override
   void initState() {
     super.initState();
-
   }
 }
 

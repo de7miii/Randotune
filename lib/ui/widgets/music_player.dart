@@ -79,10 +79,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                   if (value.allSongs.isNotEmpty) {
                                     if (value.currentSongPosition == 0 ||
                                         value.currentSongPosition < 5000.0) {
-                                      print(value.currentSongPosition);
                                       skipToPrevious();
                                     } else {
-                                      print(value.currentSongPosition);
                                       seek(0);
                                     }
                                   }
