@@ -27,7 +27,6 @@ class Search extends SearchDelegate {
   }
 
   @override
-  // TODO: implement searchFieldLabel
   String get searchFieldLabel => 'Search Albums (Album Title)';
 
   @override
