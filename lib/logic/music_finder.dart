@@ -1,118 +1,168 @@
-import 'dart:math';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:random_music_player/ui/widgets/music_player.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:random_music_player/utils/album_info.dart';
+import 'package:random_music_player/utils/song_info.dart';
 
 class MusicFinder with ChangeNotifier {
   final FlutterAudioQuery aq = FlutterAudioQuery();
+  final musicPlayer = MusicPlayer();
+  Box songsBox = Hive.box('songs'), albumsBox = Hive.box('albums');
 
-  List<SongInfo> _allSongs = [];
-  List<AlbumInfo> _allAlbums = [];
+  List<SongInfoLocal> _allSongs = [];
+  List<AlbumInfoLocal> _allAlbums = [];
   List<ArtistInfo> _allArtists = [];
   bool _isLoading = true;
   bool _isPlaying = false;
-  SongInfo _playing;
-  AudioPlayer _audioPlayer = AudioPlayer();
-  double _currentSongDuration = 0.0;
-  double _currentSongPosition = 0.0;
-  SongInfo _upNext;
-  AlbumInfo _selectedAlbum;
-  List<SongInfo> _selectedAlbumSongs = [];
+  bool _isUiActive = true;
+  AlbumInfoLocal _selectedAlbum;
+  List<SongInfoLocal> _selectedAlbumSongs = [];
+  SongInfoLocal _currentlyPlaying;
+  int _currentSongPosition = 0;
+  int _currentSongDuration = 0;
 
-  List<SongInfo> get allSongs => _allSongs;
-  List<AlbumInfo> get allAlbums => _allAlbums;
+  List<SongInfoLocal> get allSongs => _allSongs;
+  List<AlbumInfoLocal> get allAlbums => _allAlbums;
   List<ArtistInfo> get allArtists => _allArtists;
   bool get isLoading => _isLoading;
   bool get isPlaying => _isPlaying;
-  SongInfo get currentlyPlaying => _playing;
-  AudioPlayer get audioPlayer => _audioPlayer;
-  double get currentSongDuration => _currentSongDuration;
-  double get currentSongPosition => _currentSongPosition;
-  SongInfo get upNext => _upNext;
-  AlbumInfo get selectedAlbum => _selectedAlbum;
-  List<SongInfo> get selectedAlbumSongs => _selectedAlbumSongs;
+  bool get isUiActive => _isUiActive;
+  AlbumInfoLocal get selectedAlbum => _selectedAlbum;
+  List<SongInfoLocal> get selectedAlbumSongs => _selectedAlbumSongs;
+  SongInfoLocal get currentlyPlaying => _currentlyPlaying;
+  int get currentSongPosition => _currentSongPosition;
+  int get currentSongDuration => _currentSongDuration;
 
-  set isPlaying(bool newVal) {
-    assert(newVal != null);
-    _isPlaying = newVal;
-    notifyListeners();
-  }
-
-  set currentlyPlaying(SongInfo newSong) {
-    assert(newSong != null);
-    _playing = newSong;
-    currentSongDuration = double.parse(newSong.duration);
-    isPlaying = true;
-    notifyListeners();
-  }
-
-  set upNext(SongInfo newSong) {
-    assert(newSong != null);
-    _upNext = newSong;
-    notifyListeners();
-  }
-
-  set currentSongPosition(double newPos) {
-    assert(newPos != null);
-    _currentSongPosition = newPos;
-    notifyListeners();
-  }
-
-  set currentSongDuration(double newDur) {
-    assert(newDur != null);
-    _currentSongDuration = newDur;
-    notifyListeners();
-  }
-
-  set selectedAlbum(AlbumInfo newAlbum) {
-    assert(newAlbum != null);
-    _selectedAlbum = newAlbum;
-    notifyListeners();
-  }
-
-  set selectedAlbumSongs(List<SongInfo> albumSongs) {
+  set selectedAlbumSongs(List<SongInfoLocal> albumSongs) {
     assert(albumSongs != null);
     _selectedAlbumSongs = albumSongs;
     notifyListeners();
   }
 
-  findAllSongs({SongSortType sortType = SongSortType.DISPLAY_NAME}) {
+  set selectedAlbum(AlbumInfoLocal newAlbum) {
+    assert(newAlbum != null);
+    _selectedAlbum = newAlbum;
+    notifyListeners();
+  }
+
+  set isPlaying(bool state) {
+    assert(state != null);
+    _isPlaying = state;
+    notifyListeners();
+  }
+
+  set isUiActive(bool state) {
+    assert(state != null);
+    _isUiActive = state;
+    notifyListeners();
+  }
+
+  set currentlyPlaying(SongInfoLocal newSong) {
+    assert(newSong != null);
+    _currentlyPlaying = newSong;
+    print("Currently Playing: ${newSong.title}");
+    notifyListeners();
+  }
+
+  set currentSongPosition(int newPos) {
+    assert(newPos != null);
+    _currentSongPosition = newPos;
+    notifyListeners();
+  }
+
+  set currentSongDuration(int newDur) {
+    assert(newDur != null);
+    _currentSongDuration = newDur;
+    notifyListeners();
+  }
+
+  set allSongs(List<SongInfoLocal> allSongs){
+    assert(allSongs != null);
+    _allSongs = allSongs;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  set allAlbums(List<AlbumInfoLocal> allAlbums){
+    assert(allAlbums != null);
+    _allAlbums = allAlbums;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  findAllSongs({SongSortType sortType = SongSortType.SMALLER_TRACK_NUMBER}) async {
     _isLoading = true;
+    notifyListeners();
     aq.getSongs(sortType: sortType).then((songsList) {
-      _allSongs = songsList;
+      _allSongs = songsList.map((e) => SongInfoLocal.fromSongInfo(e)).toList().where((element) => element.isMusic == true).toList();
       _isLoading = false;
+      print('songs are loaded');
       notifyListeners();
+      if(songsBox?.isOpen ?? false){
+        print('songs box is open');
+        if(!songsBox.containsKey('allSongs')){
+          songsBox.put('allSongs', _allSongs);
+          print('songs put in box');
+        }
+      }
     }, onError: (err) {
       print(err);
     });
   }
 
-  findAllAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) {
+  findAllAlbums({AlbumSortType sortType = AlbumSortType.DEFAULT}) async {
     _isLoading = true;
+    notifyListeners();
     aq.getAlbums(sortType: sortType).then((albumList) {
-      _allAlbums = albumList;
+      _allAlbums = albumList.map((e) => AlbumInfoLocal.fromAlbumInfo(e)).toList();
       _isLoading = false;
+      print('albums loaded');
       notifyListeners();
+      if(albumsBox?.isOpen ?? false){
+        print('albums box is open');
+        if(!albumsBox.containsKey('allAlbums')){
+          albumsBox.put('allAlbums', allAlbums);
+          print('albums put in box');
+        }
+      }
     }, onError: (err) {
       print(err);
     });
   }
 
-  findAlbumSongs({@required String albumId}) {
+  findAlbumSongs({@required AlbumInfoLocal album}) async {
+    assert(album != null);
+    selectedAlbum = album;
     _isLoading = true;
-    aq.getSongsFromAlbum(albumId: albumId, sortType: SongSortType.SMALLER_TRACK_NUMBER).then(
-      (songsList) {
-        print(songsList);
-        _selectedAlbumSongs = songsList;
-        _isLoading = false;
-        notifyListeners();
-      },
-      onError: (err) => print(err),
-    );
+    notifyListeners();
+    if (allSongs?.isNotEmpty ?? false) {
+      _selectedAlbumSongs =
+          allSongs.where((element) => element.albumId == album.id).toList();
+      _isLoading = false;
+      notifyListeners();
+    } else {
+      aq
+          .getSongsFromAlbum(
+              albumId: album.id, sortType: SongSortType.SMALLER_TRACK_NUMBER)
+          .then(
+        (songsList) {
+          print(songsList);
+          _selectedAlbumSongs = songsList.map((e) => SongInfoLocal.fromSongInfo(e)).toList();
+          _isLoading = false;
+          notifyListeners();
+        },
+        onError: (err) => print(err),
+      );
+    }
   }
 
-  findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) {
+  findAllArtists({ArtistSortType sortType = ArtistSortType.DEFAULT}) async {
+    _isLoading = true;
+    notifyListeners();
     aq.getArtists(sortType: sortType).then((artistsList) {
       _allArtists = artistsList;
       _isLoading = false;
@@ -122,66 +172,17 @@ class MusicFinder with ChangeNotifier {
     });
   }
 
-  playSong(SongInfo song) async {
-    assert(song != null);
-    assert(audioPlayer != null);
-    audioPlayer.setReleaseMode(ReleaseMode.STOP);
-    int res = await audioPlayer.play(song.filePath, isLocal: true);
-    if (res == 1) {
-      getPlayingSongPosition();
-      print("Playing: ${song.title}");
-      notifyListeners();
-    }
-    audioPlayer.onPlayerCompletion.listen((event) {
-      print('song finished');
-      Future.delayed(Duration(seconds: 5));
-      currentSongPosition = 0.0;
-      currentlyPlaying = upNext;
-      notifyListeners();
-      playSong(currentlyPlaying);
-    });
+  initHive() async {
+    var path = await getApplicationDocumentsDirectory();
+    await Hive.initFlutter();
+    Hive.init(path.path);
+    Hive.registerAdapter(SongInfoLocalAdapter());
+    Hive.registerAdapter(AlbumInfoLocalAdapter());
+    await openHiveBoxes();
   }
 
-  pauseSong() async {
-    assert(audioPlayer != null);
-    await audioPlayer.pause();
-  }
-
-  resumeSong() async {
-    assert(audioPlayer != null);
-    await audioPlayer.resume();
-  }
-
-  seek({@required int duration}) async {
-    assert(audioPlayer != null);
-    assert(duration != null);
-    if (audioPlayer.state == AudioPlayerState.PLAYING ||
-        audioPlayer.state == AudioPlayerState.PAUSED) {
-      if (duration == 0) {
-        await audioPlayer.seek(Duration(seconds: 0));
-        currentSongPosition = 0.0;
-        notifyListeners();
-      } else {
-        await audioPlayer.seek(Duration(seconds: duration));
-        notifyListeners();
-      }
-    }
-  }
-
-  getPlayingSongPosition() async {
-    assert(audioPlayer != null);
-    if (audioPlayer.state == AudioPlayerState.PLAYING) {
-      audioPlayer.onAudioPositionChanged.listen((event) {
-        currentSongPosition = event.inMilliseconds.toDouble();
-        notifyListeners();
-        if ((currentSongDuration - event.inMilliseconds < 10000 &&
-                upNext == null) ||
-            (upNext == currentlyPlaying &&
-                currentSongDuration - event.inMilliseconds < 10000)) {
-          upNext = allSongs[Random.secure().nextInt(allSongs.length)];
-          print("Up next: ${upNext.title}");
-        }
-      });
-    }
+  openHiveBoxes() async {
+    songsBox = await Hive.openBox('songs');
+    albumsBox = await Hive.openBox('albums');
   }
 }
