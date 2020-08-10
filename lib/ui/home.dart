@@ -12,7 +12,6 @@ import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
 import 'package:random_music_player/utils/search.dart';
-import 'package:random_music_player/utils/song_info.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -40,7 +39,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  PermissionStatus permissionStatus;
   Box songsBox = Hive.box('songs');
   Box albumsBox = Hive.box('albums');
   @override
@@ -64,16 +62,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 IconButton(
                   onPressed: () {
                     showSearch(
-                        context: context,
-                        delegate: Search(
-                            allAlbums:
-                                Provider.of<MusicFinder>(context, listen: false)
+                            context: context,
+                            delegate: Search(
+                                allAlbums: Provider.of<MusicFinder>(context,
+                                            listen: false)
                                         .allAlbums
                                         .isEmpty
-                                    ? albumsBox.get('allAlbums', defaultValue: [])
+                                    ? albumsBox
+                                        .get('allAlbums', defaultValue: [])
                                     : Provider.of<MusicFinder>(context,
                                             listen: false)
-                                        .allAlbums));
+                                        .allAlbums))
+                        .then((value) {
+                          if(value == null){
+                            AudioService.connect();
+                          }});
                   },
                   icon: Icon(Icons.search),
                 )
@@ -138,44 +141,142 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
+  void _loadMedia() {
+    AudioService.connect();
+    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
+    if ((songsBox.isOpen && albumsBox.isOpen) &&
+        (songsBox.containsKey('allSongs') &&
+            albumsBox.containsKey('allAlbums'))) {
+      print('boxes are open');
+      musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
+      musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
+    } else {
+      musicModel
+        ..findAllSongs()
+        ..findAllAlbums();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     print('home page init state');
-    MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    if (permissionStatus?.isGranted ?? false) {
-      if ((songsBox.isOpen && albumsBox.isOpen) &&
-          (songsBox.containsKey('allSongs') &&
-              albumsBox.containsKey('allAlbums'))) {
-        print('boxes are open');
-        musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
-        musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
+    Permission.storage.status.then((value) {
+      if (value.isGranted) {
+        _loadMedia();
       } else {
-        musicModel
-          ..findAllSongs()
-          ..findAllAlbums();
-      }
-    } else {
-      Permission.storage.request().then((status) {
-        permissionStatus = status;
-        if (status.isGranted) {
-          if ((songsBox.isOpen && albumsBox.isOpen) &&
-              (songsBox.containsKey('allSongs') &&
-                  albumsBox.containsKey('allAlbums'))) {
-            print('boxes are open');
-            musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
-            musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
-          } else {
-            musicModel
-              ..findAllSongs()
-              ..findAllAlbums();
+        Permission.storage.request().then((status) {
+          if (status.isGranted) {
+            _loadMedia();
+          } else if (status.isDenied) {
+            showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('Media Storage Permission Required'),
+                    content: Text(
+                        'For the app to work it requires media storage permission to fetch your music library. Please consider granting this permission.'),
+                    actions: <Widget>[
+                      RaisedButton(
+                          child: Text('Request Permission'),
+                          onPressed: () {
+                            Permission.storage.request().then((value) {
+                              if (value.isGranted) {
+                                _loadMedia();
+                              } else if (value.isPermanentlyDenied) {
+                                showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text(
+                                            'Permission Permanently Denied'),
+                                        content: Text(
+                                            'To use the app grant the storage permission from the permission settings.'),
+                                        actions: <Widget>[
+                                          RaisedButton(
+                                            child: Text('Open Settings'),
+                                            onPressed: () {
+                                              openAppSettings()
+                                                  .then((value) => null)
+                                                  .isGranted
+                                                  .then((value) {
+                                                if (value) {
+                                                  _loadMedia();
+                                                } else {
+                                                  AudioService.disconnect();
+                                                  SystemNavigator.pop();
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          RaisedButton(
+                                            child: Text('Close App'),
+                                            onPressed: () {
+                                              AudioService.disconnect();
+                                              SystemNavigator.pop();
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    });
+                              } else {
+                                AudioService.disconnect();
+                                SystemNavigator.pop();
+                              }
+                            });
+                          }),
+                      RaisedButton(
+                        child: Text('Close App'),
+                        onPressed: () {
+                          AudioService.disconnect();
+                          SystemNavigator.pop();
+                        },
+                      ),
+                    ],
+                  );
+                });
+          } else if (status.isPermanentlyDenied) {
+            showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('Permission is Permanently Denied'),
+                    content: Text(
+                        'To use the app grant the storage permission from the permission settings.'),
+                    actions: <Widget>[
+                      RaisedButton(
+                        child: Text('Open Settings'),
+                        onPressed: () {
+                          openAppSettings()
+                              .then((value) {})
+                              .isGranted
+                              .then((value) {
+                            if (value) {
+                              _loadMedia();
+                            } else {
+                              AudioService.disconnect();
+                              SystemNavigator.pop();
+                            }
+                          });
+                        },
+                      ),
+                      RaisedButton(
+                        child: Text('Close App'),
+                        onPressed: () {
+                          AudioService.disconnect();
+                          SystemNavigator.pop();
+                        },
+                      ),
+                    ],
+                  );
+                });
           }
-        }
-      }, onError: (err) {
-        print(err);
-      });
-    }
+        }, onError: (err) {
+          print(err);
+        });
+      }
+    });
   }
 
   @override

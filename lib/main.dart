@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -5,6 +7,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:random_music_player/ui/home.dart';
 import 'package:random_music_player/utils/album_info.dart';
 import 'package:random_music_player/utils/song_info.dart';
+import 'package:sentry/sentry.dart';
+
+const String DSN = String.fromEnvironment('DSN');
+
+final SentryClient _sentry = SentryClient(
+    dsn: DSN);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,8 +24,34 @@ void main() async {
   await Hive.openBox('songs');
   await Hive.openBox('albums');
   print('hive initilized and boxes are open');
-  runApp(MyApp());
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (isInDebugMode) {
+      FlutterError.dumpErrorToConsole(details);
+    } else {
+      Zone.current.handleUncaughtError(details.exception, details.stack);
+    }
+  };
+  runZonedGuarded<Future<void>>(() async {
+    runApp(MyApp());
+  }, (Object error, StackTrace stackTrace) {
+    _reportError(error, stackTrace);
+  });
 }
 
-initHive() async {
+bool get isInDebugMode {
+  bool isDebugMode = false;
+  assert(isDebugMode = true);
+  return isDebugMode;
+}
+
+Future<void> _reportError(dynamic error, dynamic stackTrace) async {
+  print("Caught Error: $error");
+  if (isInDebugMode) {
+    print(stackTrace);
+  } else {
+    _sentry.captureException(
+      exception: error,
+      stackTrace: stackTrace,
+    );
+  }
 }
