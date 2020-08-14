@@ -280,6 +280,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onClick(MediaButton button) {
+    // TODO: handle double and triple clicks to enhance user experience
     switch (button) {
       case MediaButton.media:
         print('media');

@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
@@ -17,6 +19,7 @@ class MusicPlayer extends StatefulWidget {
 
 class _MusicPlayerState extends State<MusicPlayer> {
   MusicFinder musicModel;
+  File vinylImage;
   @override
   Widget build(BuildContext context) {
     musicModel = Provider.of<MusicFinder>(context, listen: false);
@@ -304,7 +307,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                   e.artist,
                   e.albumArtwork != null
                       ? File(e.albumArtwork).uri.toString()
-                      : 'https://via.placeholder.com/1080x1080?text=Album+Art'
+                      : vinylImage.uri.toString()
                 ])
             .toList()
       },
@@ -332,31 +335,33 @@ class _MusicPlayerState extends State<MusicPlayer> {
     });
   }
 
+  _loadAssetImage() async {
+    var byteData = await rootBundle.load('assets/images/vinyl_album.png');
+    final file = File("${(await getTemporaryDirectory()).path}/vinyl_album.png");
+    vinylImage = await file.writeAsBytes(byteData.buffer.asUint8List());
+  }
+
   @override
   void initState() {
     super.initState();
     print('music player init state');
     _handleCustomEvents();
+    _loadAssetImage();
+    if (!AudioService.connected) {
+      AudioService.connect();
+    }
     AudioService.playbackStateStream.listen((event) {
       if (!AudioService.connected) {
         AudioService.connect();
+      }
         print(event.playing);
         if (event.playing) {
           musicModel.isPlaying = true;
         } else {
           musicModel.isPlaying = false;
         }
-      } else {
-        if (AudioService.running) {
-          print(event.playing);
-          if (event.playing) {
-            musicModel.isPlaying = true;
-          } else {
-            musicModel.isPlaying = false;
-          }
-        }
-      }
     });
+
   }
 
   @override

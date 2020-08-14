@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/background_music_handler.dart';
 import 'package:random_music_player/logic/music_finder.dart';
@@ -17,7 +19,7 @@ class SongsListItem extends StatefulWidget {
 }
 
 class _SongsListItemState extends State<SongsListItem> {
-
+  File vinylImage;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -72,7 +74,7 @@ class _SongsListItemState extends State<SongsListItem> {
     if (AudioService.running) {
       var artUri = widget.songInfo.albumArtwork != null
           ? File(widget.songInfo.albumArtwork).uri.toString()
-          : 'https://via.placeholder.com/1080x1080?text=Album+Art';
+          : vinylImage.uri.toString();
       await AudioService.playMediaItem(MediaItem(
           id: widget.songInfo.id,
           genre: widget.songInfo.filePath,
@@ -99,7 +101,7 @@ class _SongsListItemState extends State<SongsListItem> {
                   e.artist,
                   e.albumArtwork != null
                       ? File(e.albumArtwork).uri.toString()
-                      : 'https://via.placeholder.com/1080x1080?text=Album+Art'
+                      : vinylImage.uri.toString()
                 ])
             .toList()
       },
@@ -109,9 +111,16 @@ class _SongsListItemState extends State<SongsListItem> {
       androidNotificationIcon: 'drawable/ic_notification',
       androidNotificationClickStartsActivity: true);
 
+  _loadAssetImage() async {
+    var byteData = await rootBundle.load('assets/images/vinyl_album.png');
+    final file = File("${(await getTemporaryDirectory()).path}/vinyl_album.png");
+    vinylImage = await file.writeAsBytes(byteData.buffer.asUint8List());
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadAssetImage();
   }
 }
 
