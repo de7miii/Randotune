@@ -18,6 +18,8 @@ void main() async {
   Hive.registerAdapter(AlbumInfoLocalAdapter());
   await Hive.openBox('songs');
   await Hive.openBox('albums');
+  await Hive.openBox('prefs');
+//  Hive.box('prefs').put('isFirstRun', true);
   print('hive initilized and boxes are open');
   FlutterError.onError = (FlutterErrorDetails details) {
     if (isInDebugMode) {

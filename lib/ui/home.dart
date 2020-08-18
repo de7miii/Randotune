@@ -319,9 +319,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (AudioService.running) {
         if (AudioService.playbackState.playing) {
           AudioService.currentMediaItemStream.listen((event) {
-            if (event.id != musicModel.currentlyPlaying.id) {
+            if (event?.id != musicModel.currentlyPlaying?.id) {
               musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                  (element) => element.id == AudioService.currentMediaItem.id);
+                  (element) => element?.id == AudioService.currentMediaItem?.id);
               musicModel.currentSongDuration =
                   int.parse(musicModel.currentlyPlaying.duration);
             }

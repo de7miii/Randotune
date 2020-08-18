@@ -10,11 +10,13 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   List<dynamic> allSongs = [];
   Duration position;
   List<MediaItem> _queue = [];
+  bool isLoopSong = false;
 
   @override
   void onStart(Map<String, dynamic> params) {
     print('onStart');
     audioPlayer = AudioPlayer(mode: PlayerMode.MEDIA_PLAYER);
+    isLoopSong ? audioPlayer.setReleaseMode(ReleaseMode.LOOP) : audioPlayer.setReleaseMode(ReleaseMode.STOP);
     allSongs = params['allSongs'];
     super.onStart(params);
   }
@@ -22,6 +24,14 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
   MediaItem getRandomSong(List<MediaItem> queue) {
     queue.shuffle(Random.secure());
     return queue[Random.secure().nextInt(queue.length)];
+  }
+
+  @override
+  Future<dynamic> onCustomAction(String name, dynamic arguments) async {
+    if(name == 'isLoopSong'){
+      isLoopSong = arguments;
+      isLoopSong ? audioPlayer.setReleaseMode(ReleaseMode.LOOP) : audioPlayer.setReleaseMode(ReleaseMode.STOP);
+    }
   }
 
   MediaItem getMediaItemFromSong(dynamic song) => MediaItem(
@@ -49,6 +59,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onPlay() async {
+    isLoopSong ? audioPlayer.setReleaseMode(ReleaseMode.LOOP) : audioPlayer.setReleaseMode(ReleaseMode.STOP);
     print('onPlay');
     if (_queue.isEmpty) {
       if (audioPlayer.state == AudioPlayerState.PAUSED) {
@@ -134,6 +145,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onPlayMediaItem(MediaItem mediaItem) async {
+    isLoopSong ? audioPlayer.setReleaseMode(ReleaseMode.LOOP) : audioPlayer.setReleaseMode(ReleaseMode.STOP);
     print('onPlayMediaItem');
     AudioServiceBackground.sendCustomEvent(mediaItem.genre);
     int res = await playSong(mediaItem.genre, audioPlayer);
@@ -159,6 +171,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onSkipToPrevious() async {
+    isLoopSong = false;
     print('OnSkipToPrevious');
     audioPlayer.getCurrentPosition().then((value)  {
       if(value == 0 || value < 5000){
@@ -178,6 +191,7 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
 
   @override
   void onSkipToNext() async {
+    isLoopSong = false;
     print('onSkipToNext');
     skipToNextAndPrevious();
     audioPlayer.onPlayerStateChanged.asBroadcastStream().listen((event) {
@@ -278,12 +292,21 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
     }
   }
 
+  var lastClick = 0;
+  var currentClick = DateTime.now().millisecondsSinceEpoch;
+
   @override
   void onClick(MediaButton button) {
-    // TODO: handle double and triple clicks to enhance user experience
-    switch (button) {
-      case MediaButton.media:
-        print('media');
+    if(button == MediaButton.media) {
+      lastClick = currentClick;
+      currentClick = DateTime
+          .now()
+          .millisecondsSinceEpoch;
+      if (currentClick - lastClick < 500) {
+        print('double click');
+        skipToNextAndPrevious();
+      } else {
+        print('single media click');
         if (audioPlayer.state == AudioPlayerState.PLAYING) {
           audioPlayer.pause();
           AudioServiceBackground.setState(
@@ -297,16 +320,34 @@ class BackgroundMusicHandler extends BackgroundAudioTask {
               processingState: AudioProcessingState.ready,
               playing: true);
         }
-        break;
-      case MediaButton.next:
-        print('next');
-        skipToNextAndPrevious();
-        break;
-      case MediaButton.previous:
-        print('previous');
-        skipToNextAndPrevious();
-        break;
+      }
     }
+//    switch (button) {
+//      case MediaButton.media:
+//        print('media');
+//        if (audioPlayer.state == AudioPlayerState.PLAYING) {
+//          audioPlayer.pause();
+//          AudioServiceBackground.setState(
+//              controls: [skipToPrevCtrl, playCtrl, skipToNextCtrl],
+//              processingState: AudioProcessingState.ready,
+//              playing: false);
+//        } else if (audioPlayer.state == AudioPlayerState.PAUSED) {
+//          audioPlayer.resume();
+//          AudioServiceBackground.setState(
+//              controls: [skipToPrevCtrl, pauseCtrl, skipToNextCtrl],
+//              processingState: AudioProcessingState.ready,
+//              playing: true);
+//        }
+//        break;
+//      case MediaButton.next:
+//        print('next');
+//        skipToNextAndPrevious();
+//        break;
+//      case MediaButton.previous:
+//        print('previous');
+//        skipToNextAndPrevious();
+//        break;
+//    }
   }
 
   @override

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 playSong(String songFilePath, AudioPlayer audioPlayer) async {
   assert(songFilePath != null);
   assert(audioPlayer != null);
-  audioPlayer.setReleaseMode(ReleaseMode.STOP);
   return await audioPlayer.play(songFilePath, isLocal: true);
 }
 

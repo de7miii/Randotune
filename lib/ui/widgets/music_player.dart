@@ -17,9 +17,12 @@ class MusicPlayer extends StatefulWidget {
   _MusicPlayerState createState() => _MusicPlayerState();
 }
 
-class _MusicPlayerState extends State<MusicPlayer> {
+class _MusicPlayerState extends State<MusicPlayer>
+    with TickerProviderStateMixin {
   MusicFinder musicModel;
   File vinylImage;
+  AnimationController _animController;
+  var loopButtonBgColor;
   @override
   Widget build(BuildContext context) {
     musicModel = Provider.of<MusicFinder>(context, listen: false);
@@ -79,7 +82,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Expanded(
-                          flex: 1,
+                          flex: 3,
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -104,32 +107,29 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                 padding: EdgeInsets.zero,
                               ),
                               SizedBox(
-                                width: 10.0,
+                                width: 8.0,
                               ),
                               IconButton(
                                 onPressed: () {
                                   if (value.allSongs.isNotEmpty) {
                                     if (value.isPlaying) {
                                       pause();
+                                      _animController.reverse();
                                     } else {
                                       play();
+                                      _animController.forward();
                                     }
                                   }
                                 },
-                                icon: !value.isPlaying
-                                    ? Icon(
-                                        Icons.play_arrow,
-                                        color: Theme.of(context).accentColor,
-                                      )
-                                    : Icon(
-                                        Icons.pause,
-                                        color: Theme.of(context).accentColor,
-                                      ),
+                                icon: AnimatedIcon(
+                                    icon: AnimatedIcons.play_pause,
+                                    progress: _animController,
+                                    color: Theme.of(context).accentColor),
                                 iconSize: 48.0,
                                 padding: EdgeInsets.zero,
                               ),
                               SizedBox(
-                                width: 10.0,
+                                width: 8.0,
                               ),
                               IconButton(
                                 onPressed: () {
@@ -149,7 +149,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                           ),
                         ),
                         Expanded(
-                          flex: 1,
+                          flex: 2,
                           child: value.currentlyPlaying != null
                               ? Padding(
                                   padding: const EdgeInsets.only(
@@ -167,6 +167,36 @@ class _MusicPlayerState extends State<MusicPlayer> {
                                   ),
                                 )
                               : Text(''),
+                        ),
+                        Expanded(
+                          child: CircleAvatar(
+                            backgroundColor: loopButtonBgColor,
+                            radius: 20.0,
+                            child: IconButton(
+                              icon: Icon(Icons.loop),
+                              iconSize: 26.0,
+                              color: Theme.of(context).accentColor,
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                value.isLoopSong
+                                    ? value.isLoopSong = false
+                                    : value.isLoopSong = true;
+                                AudioService.customAction(
+                                    'isLoopSong', value.isLoopSong);
+                                Hive.box('prefs')
+                                    .put('isLoopSong', value.isLoopSong);
+                                setState(() {
+                                  value.isLoopSong
+                                      ? loopButtonBgColor =
+                                          Colors.white.withAlpha(100)
+                                      : loopButtonBgColor = Colors.transparent;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 4.0,
                         ),
                       ],
                     ),
@@ -337,7 +367,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
 
   _loadAssetImage() async {
     var byteData = await rootBundle.load('assets/images/vinyl_album.png');
-    final file = File("${(await getTemporaryDirectory()).path}/vinyl_album.png");
+    final file =
+        File("${(await getTemporaryDirectory()).path}/vinyl_album.png");
     vinylImage = await file.writeAsBytes(byteData.buffer.asUint8List());
   }
 
@@ -347,6 +378,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
     print('music player init state');
     _handleCustomEvents();
     _loadAssetImage();
+    _animController =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 400));
     if (!AudioService.connected) {
       AudioService.connect();
     }
@@ -354,14 +387,15 @@ class _MusicPlayerState extends State<MusicPlayer> {
       if (!AudioService.connected) {
         AudioService.connect();
       }
-        print(event.playing);
-        if (event.playing) {
-          musicModel.isPlaying = true;
-        } else {
-          musicModel.isPlaying = false;
-        }
+      print(event.playing);
+      if (event.playing) {
+        musicModel.isPlaying = true;
+        _animController.forward();
+      } else {
+        musicModel.isPlaying = false;
+        _animController.reverse();
+      }
     });
-
   }
 
   @override
@@ -398,6 +432,17 @@ class _MusicPlayerState extends State<MusicPlayer> {
         }
       }
     });
+    print('isLoopSong = ${musicModel.isLoopSong}');
+    musicModel.isLoopSong =
+        Hive.box('prefs').get('isLoopSong', defaultValue: false);
+    print('isLoopSong = ${musicModel.isLoopSong}');
+    AudioService.customAction(
+        'isLoopSong', musicModel.isLoopSong);
+    setState(() {
+      musicModel.isLoopSong
+          ? loopButtonBgColor = Colors.white.withAlpha(100)
+          : loopButtonBgColor = Colors.transparent;
+    });
   }
 
   @override
@@ -410,6 +455,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
   void dispose() {
     super.dispose();
     print('music player dispose');
+    if(!AudioService.connected) {
+      _animController.dispose();
+    }
   }
 
   @override

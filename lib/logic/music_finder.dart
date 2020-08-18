@@ -18,7 +18,7 @@ class MusicFinder with ChangeNotifier {
   List<ArtistInfo> _allArtists = [];
   bool _isLoading = true;
   bool _isPlaying = false;
-  bool _isUiActive = true;
+  bool _isLoopSong = false;
   AlbumInfoLocal _selectedAlbum;
   List<SongInfoLocal> _selectedAlbumSongs = [];
   SongInfoLocal _currentlyPlaying;
@@ -30,7 +30,7 @@ class MusicFinder with ChangeNotifier {
   List<ArtistInfo> get allArtists => _allArtists;
   bool get isLoading => _isLoading;
   bool get isPlaying => _isPlaying;
-  bool get isUiActive => _isUiActive;
+  bool get isLoopSong => _isLoopSong;
   AlbumInfoLocal get selectedAlbum => _selectedAlbum;
   List<SongInfoLocal> get selectedAlbumSongs => _selectedAlbumSongs;
   SongInfoLocal get currentlyPlaying => _currentlyPlaying;
@@ -55,10 +55,10 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
-  set isUiActive(bool state) {
+  set isLoopSong(bool state) {
     assert(state != null);
-    _isUiActive = state;
-    notifyListeners();
+    _isLoopSong = state;
+//    notifyListeners();
   }
 
   set currentlyPlaying(SongInfoLocal newSong) {
