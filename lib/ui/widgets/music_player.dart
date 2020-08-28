@@ -18,7 +18,7 @@ class MusicPlayer extends StatefulWidget {
 }
 
 class _MusicPlayerState extends State<MusicPlayer>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   MusicFinder musicModel;
   File vinylImage;
   AnimationController _animController;
@@ -438,11 +438,13 @@ class _MusicPlayerState extends State<MusicPlayer>
     print('isLoopSong = ${musicModel.isLoopSong}');
     AudioService.customAction(
         'isLoopSong', musicModel.isLoopSong);
-    setState(() {
-      musicModel.isLoopSong
-          ? loopButtonBgColor = Colors.white.withAlpha(100)
-          : loopButtonBgColor = Colors.transparent;
-    });
+    if(mounted) {
+      setState(() {
+        musicModel.isLoopSong
+            ? loopButtonBgColor = Colors.white.withAlpha(100)
+            : loopButtonBgColor = Colors.transparent;
+      });
+    }
   }
 
   @override
