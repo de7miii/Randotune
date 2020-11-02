@@ -6,16 +6,17 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:random_music_player/ui/widgets/music_player.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:random_music_player/utils/album_info.dart';
+import 'package:random_music_player/utils/artist_info.dart';
 import 'package:random_music_player/utils/song_info.dart';
 
 class MusicFinder with ChangeNotifier {
   final FlutterAudioQuery aq = FlutterAudioQuery();
   final musicPlayer = MusicPlayer();
-  Box songsBox = Hive.box('songs'), albumsBox = Hive.box('albums');
+  Box songsBox = Hive.box('songs'), albumsBox = Hive.box('albums'), artistsBox = Hive.box('artists');
 
   List<SongInfoLocal> _allSongs = [];
   List<AlbumInfoLocal> _allAlbums = [];
-  List<ArtistInfo> _allArtists = [];
+  List<ArtistInfoLocal> _allArtists = [];
   bool _isLoading = true;
   bool _isPlaying = false;
   bool _isLoopSong = false;
@@ -27,7 +28,7 @@ class MusicFinder with ChangeNotifier {
 
   List<SongInfoLocal> get allSongs => _allSongs;
   List<AlbumInfoLocal> get allAlbums => _allAlbums;
-  List<ArtistInfo> get allArtists => _allArtists;
+  List<ArtistInfoLocal> get allArtists => _allArtists;
   bool get isLoading => _isLoading;
   bool get isPlaying => _isPlaying;
   bool get isLoopSong => _isLoopSong;
@@ -94,6 +95,13 @@ class MusicFinder with ChangeNotifier {
     notifyListeners();
   }
 
+  set allArtists(List<ArtistInfoLocal> allArtists){
+    assert(allArtists != null);
+    _allArtists = allArtists;
+    _isLoading = false;
+    notifyListeners();
+  }
+
   findAllSongs({SongSortType sortType = SongSortType.SMALLER_TRACK_NUMBER}) async {
     _isLoading = true;
     notifyListeners();
@@ -125,7 +133,7 @@ class MusicFinder with ChangeNotifier {
       if(albumsBox?.isOpen ?? false){
         print('albums box is open');
         if(!albumsBox.containsKey('allAlbums')){
-          albumsBox.put('allAlbums', allAlbums);
+          albumsBox.put('allAlbums', _allAlbums);
           print('albums put in box');
         }
       }
@@ -164,25 +172,18 @@ class MusicFinder with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     aq.getArtists(sortType: sortType).then((artistsList) {
-      _allArtists = artistsList;
+      _allArtists = artistsList.map((e) => ArtistInfoLocal.fromArtistInfo(e)).toList();
       _isLoading = false;
       notifyListeners();
+      if(artistsBox?.isOpen ?? false){
+        print('artists box is open');
+        if(!artistsBox.containsKey('allArtists')){
+          artistsBox.put('allArtists', _allArtists);
+          print('artists put in box');
+        }
+      }
     }, onError: (err) {
       print(err);
     });
-  }
-
-  initHive() async {
-    var path = await getApplicationDocumentsDirectory();
-    await Hive.initFlutter();
-    Hive.init(path.path);
-    Hive.registerAdapter(SongInfoLocalAdapter());
-    Hive.registerAdapter(AlbumInfoLocalAdapter());
-    await openHiveBoxes();
-  }
-
-  openHiveBoxes() async {
-    songsBox = await Hive.openBox('songs');
-    albumsBox = await Hive.openBox('albums');
   }
 }

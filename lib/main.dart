@@ -7,6 +7,7 @@ import 'package:instabug_flutter/CrashReporting.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:random_music_player/ui/home.dart';
 import 'package:random_music_player/utils/album_info.dart';
+import 'package:random_music_player/utils/artist_info.dart';
 import 'package:random_music_player/utils/song_info.dart';
 
 void main() async {
@@ -16,9 +17,11 @@ void main() async {
   Hive.init(path.path);
   Hive.registerAdapter(SongInfoLocalAdapter());
   Hive.registerAdapter(AlbumInfoLocalAdapter());
+  Hive.registerAdapter(ArtistInfoLocalAdapter());
   await Hive.openBox('songs');
   await Hive.openBox('albums');
   await Hive.openBox('prefs');
+  await Hive.openBox('artists');
 //  Hive.box('prefs').put('isFirstRun', true);
   print('hive initilized and boxes are open');
   FlutterError.onError = (FlutterErrorDetails details) {
