@@ -14,6 +14,7 @@ import 'package:random_music_player/logic/music_finder.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
+import 'package:random_music_player/ui/widgets/artsit_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
 import 'package:random_music_player/utils/environment_config.dart';
 import 'package:random_music_player/utils/search.dart';
@@ -46,10 +47,15 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Box songsBox = Hive.box('songs');
   Box albumsBox = Hive.box('albums');
+  Box artistsBox = Hive.box('artists');
+  Color bgColor = Colors.transparent;
+  int _selectedIndex;
+  int _previousIndex;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: NestedScrollView(
+        floatHeaderSlivers: true,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return <Widget>[
             SliverAppBar(
@@ -60,9 +66,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     .headline6
                     .copyWith(color: Theme.of(context).accentColor),
               ),
-              floating: true,
-              pinned: false,
-              snap: true,
+              floating: false,
+              pinned: true,
+              snap: false,
               actions: <Widget>[
                 IconButton(
                   onPressed: () {
@@ -106,52 +112,121 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           top: false,
           child: Consumer<MusicFinder>(
             builder: (context, value, child) {
-              return Stack(
-                children: <Widget>[
-                  !value.isLoading
-                      ? GridView.builder(
-                          padding: EdgeInsets.only(bottom: 144.0),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2),
-                          itemBuilder: (context, index) {
-                            return GestureDetector(
-                              onTap: () {
-                                Provider.of<MusicFinder>(context, listen: false)
-                                    .findAlbumSongs(
-                                        album: value.allAlbums[index]);
-                                Navigator.pushNamed(context, '/album_page')
-                                    .then((ret) {
-                                  print('popped back to home');
-                                  Future.delayed(Duration(milliseconds: 500),
-                                      () {
-                                    if (!AudioService.connected) {
-                                      AudioService.connect();
-                                    }
-                                  });
-                                });
-                              },
-                              child: AlbumListItem(
-                                albumInfo: value.allAlbums[index],
-                              ),
-                            );
-                          },
-                          itemCount: value.allAlbums.length,
-                        )
-                      : Center(
-                          child: CircularProgressIndicator(),
+              return Column(children: [
+                SizedBox(
+                  height: 80,
+                  width: double.infinity,
+                  child: ListView.builder(
+                    itemBuilder: (context, index) {
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _previousIndex = _selectedIndex;
+                            _selectedIndex = index;
+                            _selectedIndex == _previousIndex
+                                ? value.isFilteredByArtist = false
+                                : value.isFilteredByArtist = true;
+                            _selectedIndex == _previousIndex
+                                ? value.selectedArtist = null
+                                : value.selectedArtist = value.allArtists
+                                    .where((element) =>
+                                        element.numberOfAlbums != '1' ||
+                                        element.numberOfTracks != '1' ||
+                                        element.artistArtPath != null)
+                                    .toList()[index];
+                            _selectedIndex == _previousIndex
+                                ? bgColor = Theme.of(context).primaryColor
+                                : bgColor = Colors.transparent;
+                          });
+                          if (value.isFilteredByArtist) {
+                            value.findArtistAlbums(
+                                artist: value.selectedArtist);
+                            setState(() {
+                              value.displayedAlbums =
+                                  value.selectedArtistAlbums;
+                            });
+                          } else {
+                            setState(() {
+                              value.displayedAlbums = value.allAlbums;
+                              _previousIndex = null;
+                              _selectedIndex = null;
+                            });
+                          }
+                        },
+                        child: ArtistListItem(
+                          artistInfo: value.allArtists
+                              .where((element) =>
+                          element.numberOfAlbums != '1' ||
+                              element.numberOfTracks != '1' ||
+                              element.artistArtPath != null)
+                              .toList()[index],
+                          bgColor:
+                              _selectedIndex != null && _selectedIndex == index
+                                  ? bgColor
+                                  : Theme.of(context).primaryColor,
                         ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      height: MediaQuery.of(context).size.height * 0.18,
-                      child: !value.isLoading || value.allSongs.isNotEmpty
-                          ? value.musicPlayer
-                          : null,
-                    ),
+                      );
+                    },
+                    itemCount: value.allArtists
+                        .where((element) =>
+                    element.numberOfAlbums != '1' ||
+                        element.numberOfTracks != '1' ||
+                        element.artistArtPath != null)
+                        .toList().length,
+                    scrollDirection: Axis.horizontal,
                   ),
-                ],
-              );
+                ),
+                Expanded(
+                  child: Stack(
+                    children: <Widget>[
+                      !value.isLoading
+                          ? GridView.builder(
+                              padding: EdgeInsets.only(bottom: 144.0),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2),
+                              itemBuilder: (context, index) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    Provider.of<MusicFinder>(context,
+                                            listen: false)
+                                        .findAlbumSongs(
+                                            album:
+                                                value.displayedAlbums[index]);
+                                    Navigator.pushNamed(context, '/album_page')
+                                        .then((ret) {
+                                      print('popped back to home');
+                                      Future.delayed(
+                                          Duration(milliseconds: 500), () {
+                                        if (!AudioService.connected) {
+                                          AudioService.connect();
+                                        }
+                                      });
+                                    });
+                                  },
+                                  child: AlbumListItem(
+                                    albumInfo: value.displayedAlbums[index],
+                                  ),
+                                );
+                              },
+                              itemCount: value.displayedAlbums.length,
+                            )
+                          : Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.18,
+                          child: !value.isLoading || value.allSongs.isNotEmpty
+                              ? value.musicPlayer
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]);
             },
           ),
         ),
@@ -162,16 +237,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void _loadMedia() {
     AudioService.connect();
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    if ((songsBox.isOpen && albumsBox.isOpen) &&
+    if ((songsBox.isOpen && albumsBox.isOpen && artistsBox.isOpen) &&
         (songsBox.containsKey('allSongs') &&
-            albumsBox.containsKey('allAlbums'))) {
+            albumsBox.containsKey('allAlbums') &&
+            artistsBox.containsKey('allArtists'))) {
       print('boxes are open');
       musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
       musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
+      musicModel.allArtists = List.castFrom(artistsBox.get('allArtists'));
+      musicModel.displayedAlbums = musicModel.allAlbums;
     } else {
       musicModel
         ..findAllSongs()
-        ..findAllAlbums();
+        ..findAllAlbums()
+        ..findAllArtists();
     }
   }
 
@@ -187,7 +266,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if(Platform.isIOS){
+    if (Platform.isIOS) {
       Instabug.start(EnvironmentConfig.IB_TOKEN, [InvocationEvent.none]);
     }
     initInstaBug();
@@ -321,7 +400,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           AudioService.currentMediaItemStream.listen((event) {
             if (event?.id != musicModel.currentlyPlaying?.id) {
               musicModel.currentlyPlaying = musicModel.allSongs.firstWhere(
-                  (element) => element?.id == AudioService.currentMediaItem?.id);
+                  (element) =>
+                      element?.id == AudioService.currentMediaItem?.id);
               musicModel.currentSongDuration =
                   int.parse(musicModel.currentlyPlaying.duration);
             }

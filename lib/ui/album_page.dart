@@ -12,6 +12,7 @@ class AlbumPage extends StatelessWidget {
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: true);
     return Scaffold(
       body: NestedScrollView(
+        floatHeaderSlivers: true,
         physics: BouncingScrollPhysics(),
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return <Widget>[
