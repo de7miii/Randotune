@@ -5,13 +5,14 @@ import 'package:random_music_player/utils/artist_info.dart';
 
 class ArtistListItem extends StatelessWidget {
   final ArtistInfoLocal artistInfo;
+  final Color bgColor;
 
-  ArtistListItem({this.artistInfo});
+  ArtistListItem({this.artistInfo, this.bgColor = const Color(0xff1f2228)});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.transparent,
+      color: bgColor,
       padding: EdgeInsets.all(5.0),
       child: Column(
         children: [
@@ -28,7 +29,7 @@ class ArtistListItem extends StatelessWidget {
             ),
           ),
           Container(
-            color: Colors.transparent,
+            color: bgColor,
             width: 50.0,
             child: Center(
               child: Text(

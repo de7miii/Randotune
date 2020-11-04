@@ -48,6 +48,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Box songsBox = Hive.box('songs');
   Box albumsBox = Hive.box('albums');
   Box artistsBox = Hive.box('artists');
+  Color bgColor = Colors.transparent;
+  int _selectedIndex;
+  int _previousIndex;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,13 +120,59 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     itemBuilder: (context, index) {
                       return InkWell(
                         onTap: () {
+                          setState(() {
+                            _previousIndex = _selectedIndex;
+                            _selectedIndex = index;
+                            _selectedIndex == _previousIndex
+                                ? value.isFilteredByArtist = false
+                                : value.isFilteredByArtist = true;
+                            _selectedIndex == _previousIndex
+                                ? value.selectedArtist = null
+                                : value.selectedArtist = value.allArtists
+                                    .where((element) =>
+                                        element.numberOfAlbums != '1' ||
+                                        element.numberOfTracks != '1' ||
+                                        element.artistArtPath != null)
+                                    .toList()[index];
+                            _selectedIndex == _previousIndex
+                                ? bgColor = Theme.of(context).primaryColor
+                                : bgColor = Colors.transparent;
+                          });
+                          if (value.isFilteredByArtist) {
+                            value.findArtistAlbums(
+                                artist: value.selectedArtist);
+                            setState(() {
+                              value.displayedAlbums =
+                                  value.selectedArtistAlbums;
+                            });
+                          } else {
+                            setState(() {
+                              value.displayedAlbums = value.allAlbums;
+                              _previousIndex = null;
+                              _selectedIndex = null;
+                            });
+                          }
                         },
                         child: ArtistListItem(
-                          artistInfo: value.allArtists[index],
+                          artistInfo: value.allArtists
+                              .where((element) =>
+                          element.numberOfAlbums != '1' ||
+                              element.numberOfTracks != '1' ||
+                              element.artistArtPath != null)
+                              .toList()[index],
+                          bgColor:
+                              _selectedIndex != null && _selectedIndex == index
+                                  ? bgColor
+                                  : Theme.of(context).primaryColor,
                         ),
                       );
                     },
-                    itemCount: value.allArtists.length,
+                    itemCount: value.allArtists
+                        .where((element) =>
+                    element.numberOfAlbums != '1' ||
+                        element.numberOfTracks != '1' ||
+                        element.artistArtPath != null)
+                        .toList().length,
                     scrollDirection: Axis.horizontal,
                   ),
                 ),
@@ -142,7 +191,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     Provider.of<MusicFinder>(context,
                                             listen: false)
                                         .findAlbumSongs(
-                                            album: value.allAlbums[index]);
+                                            album:
+                                                value.displayedAlbums[index]);
                                     Navigator.pushNamed(context, '/album_page')
                                         .then((ret) {
                                       print('popped back to home');
@@ -155,11 +205,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     });
                                   },
                                   child: AlbumListItem(
-                                    albumInfo: value.allAlbums[index],
+                                    albumInfo: value.displayedAlbums[index],
                                   ),
                                 );
                               },
-                              itemCount: value.allAlbums.length,
+                              itemCount: value.displayedAlbums.length,
                             )
                           : Center(
                               child: CircularProgressIndicator(),
@@ -195,6 +245,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       musicModel.allSongs = List.castFrom(songsBox.get('allSongs'));
       musicModel.allAlbums = List.castFrom(albumsBox.get('allAlbums'));
       musicModel.allArtists = List.castFrom(artistsBox.get('allArtists'));
+      musicModel.displayedAlbums = musicModel.allAlbums;
     } else {
       musicModel
         ..findAllSongs()
