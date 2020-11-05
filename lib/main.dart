@@ -22,7 +22,6 @@ void main() async {
   await Hive.openBox('albums');
   await Hive.openBox('prefs');
   await Hive.openBox('artists');
-//  Hive.box('prefs').put('isFirstRun', true);
   print('hive initilized and boxes are open');
   FlutterError.onError = (FlutterErrorDetails details) {
     if (isInDebugMode) {

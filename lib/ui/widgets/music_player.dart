@@ -22,9 +22,24 @@ class _MusicPlayerState extends State<MusicPlayer>
   MusicFinder musicModel;
   File vinylImage;
   AnimationController _animController;
+  Box prefsBox = Hive.box('prefs');
+  bool displayFeatures = false;
+
+
   var loopButtonBgColor;
   @override
   Widget build(BuildContext context) {
+
+    if (prefsBox?.isOpen ?? false) {
+      if (prefsBox.containsKey('displayFeatures')) {
+        displayFeatures = prefsBox.get('displayFeatures');
+      }
+    }
+
+    if (displayFeatures) {
+
+    }
+
     musicModel = Provider.of<MusicFinder>(context, listen: false);
     return Consumer<MusicFinder>(builder: (context, value, child) {
       return Stack(
