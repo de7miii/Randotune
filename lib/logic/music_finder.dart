@@ -169,6 +169,10 @@ class MusicFinder with ChangeNotifier {
       _isLoading = false;
       print('albums loaded');
       notifyListeners();
+      if(displayedAlbums.isEmpty){
+        displayedAlbums = allAlbums;
+        notifyListeners();
+      }
       if (albumsBox?.isOpen ?? false) {
         print('albums box is open');
         if (!albumsBox.containsKey('allAlbums')) {
