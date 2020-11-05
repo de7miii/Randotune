@@ -145,7 +145,7 @@ class MusicFinder with ChangeNotifier {
           .toList()
           .where((element) => element.isMusic == true)
           .toList();
-      _isLoading = false;
+      // _isLoading = false;
       print('songs are loaded');
       notifyListeners();
       if (songsBox?.isOpen ?? false) {
@@ -166,8 +166,10 @@ class MusicFinder with ChangeNotifier {
     aq.getAlbums(sortType: sortType).then((albumList) {
       _allAlbums =
           albumList.map((e) => AlbumInfoLocal.fromAlbumInfo(e)).toList();
-      _isLoading = false;
+      // _isLoading = false;
       print('albums loaded');
+      notifyListeners();
+      displayedAlbums = allAlbums;
       notifyListeners();
       if (albumsBox?.isOpen ?? false) {
         print('albums box is open');
@@ -212,8 +214,9 @@ class MusicFinder with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     aq.getArtists(sortType: sortType).then((artistsList) {
-      _allArtists =
-          artistsList.map((e) => ArtistInfoLocal.fromArtistInfo(e)).toList();
+      _allArtists = artistsList
+          .map((e) => ArtistInfoLocal.fromArtistInfo(e))
+          .toList();
       _isLoading = false;
       notifyListeners();
       if (artistsBox?.isOpen ?? false) {

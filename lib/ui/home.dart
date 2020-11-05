@@ -18,6 +18,9 @@ import 'package:random_music_player/ui/widgets/artsit_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
 import 'package:random_music_player/utils/environment_config.dart';
 import 'package:random_music_player/utils/search.dart';
+import 'package:showcaseview/showcase.dart';
+import 'package:showcaseview/showcase_widget.dart';
+import 'package:random_music_player/utils/strings.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -30,8 +33,50 @@ class MyApp extends StatelessWidget {
         theme: appTheme,
         initialRoute: '/',
         routes: {
-          '/': (context) => AudioServiceWidget(child: HomePage()),
-          '/album_page': (context) => AudioServiceWidget(child: AlbumPage())
+          '/': (context) => AudioServiceWidget(
+                  child: ShowCaseWidget(
+                builder: Builder(builder: (context) => HomePage()),
+                onFinish: () {
+                  Hive.box('prefs').put('displayFeatures', false);
+                  print(
+                      'displayFeatures after showcase finished: ${Hive.box('prefs').get('displayFeatures')}');
+                  if (Hive.box('prefs').get('isFirstRun')) {
+                    showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text('What\'s New in This Update'),
+                            content: Column(
+                              children: [
+                                Text(feature_1),
+                                SizedBox(
+                                  height: 5.0,
+                                ),
+                                Text(feature_2),
+                                SizedBox(
+                                  height: 5.0,
+                                ),
+                                Text(feature_3),
+                              ],
+                            ),
+                            actions: [
+                              RaisedButton(
+                                onPressed: () {
+                                  Hive.box('prefs').put('isFirstRun', false);
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Dismiss'),
+                              )
+                            ],
+                          );
+                        });
+                  }
+                },
+              )),
+          '/album_page': (context) => AudioServiceWidget(
+                  child: ShowCaseWidget(
+                builder: Builder(builder: (context) => AlbumPage()),
+              ))
         },
       ),
     );
@@ -48,11 +93,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Box songsBox = Hive.box('songs');
   Box albumsBox = Hive.box('albums');
   Box artistsBox = Hive.box('artists');
+  Box prefsBox = Hive.box('prefs');
   Color bgColor = Colors.transparent;
   int _selectedIndex;
   int _previousIndex;
+  bool displayFeatures = false;
+  GlobalKey _two = GlobalKey();
+  GlobalKey _three = GlobalKey();
+  GlobalKey _four = GlobalKey();
+  GlobalKey _five = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
+    // if (prefsBox?.isOpen ?? false) {
+    //   if (prefsBox.containsKey('displayFeatures')) {
+    //     displayFeatures = prefsBox.get('displayFeatures');
+    //     ShowCaseWidget.of(context)
+    //         .startShowCase([_one, _two, _three, _four, _five]);
+    //   }
+    // }
+    //
+    // if (displayFeatures) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) =>
+    //       ShowCaseWidget.of(context)
+    //           .startShowCase([_one, _two, _three, _four, _five]));
+    // }
+
     return Scaffold(
       body: NestedScrollView(
         floatHeaderSlivers: true,
@@ -70,39 +136,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               pinned: true,
               snap: false,
               actions: <Widget>[
-                IconButton(
-                  onPressed: () {
-                    showSearch(
-                            context: context,
-                            delegate: Search(
-                                allAlbums: Provider.of<MusicFinder>(context,
-                                            listen: false)
-                                        .allAlbums
-                                        .isEmpty
-                                    ? albumsBox
-                                        .get('allAlbums', defaultValue: [])
-                                    : Provider.of<MusicFinder>(context,
-                                            listen: false)
-                                        .allAlbums))
-                        .then((value) {
-                      if (value == null) {
-                        AudioService.connect();
-                      }
-                    });
-                  },
-                  icon: Icon(Icons.search),
-                ),
-                FlatButton(
-                  child: Text(
-                    'Report a Bug',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyText2
-                        .copyWith(color: Theme.of(context).accentColor),
+                Showcase(
+                  key: _four,
+                  description: 'Search for a specific album in your library.',
+                  child: IconButton(
+                    onPressed: () {
+                      showSearch(
+                              context: context,
+                              delegate: Search(
+                                  allAlbums: Provider.of<MusicFinder>(context,
+                                              listen: false)
+                                          .allAlbums
+                                          .isEmpty
+                                      ? albumsBox
+                                          .get('allAlbums', defaultValue: [])
+                                      : Provider.of<MusicFinder>(context,
+                                              listen: false)
+                                          .allAlbums))
+                          .then((value) {
+                        if (value == null) {
+                          AudioService.connect();
+                        }
+                      });
+                    },
+                    icon: Icon(Icons.search),
                   ),
-                  onPressed: () {
-                    Instabug.show();
-                  },
+                ),
+                Showcase(
+                  key: _five,
+                  description: 'Report bugs, or request new features.',
+                  child: FlatButton(
+                    child: Text(
+                      'Report a Bug',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyText2
+                          .copyWith(color: Theme.of(context).accentColor),
+                    ),
+                    onPressed: () {
+                      Instabug.show();
+                    },
+                  ),
                 ),
               ],
             ),
@@ -116,64 +190,54 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 SizedBox(
                   height: 80,
                   width: double.infinity,
-                  child: ListView.builder(
-                    itemBuilder: (context, index) {
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            _previousIndex = _selectedIndex;
-                            _selectedIndex = index;
-                            _selectedIndex == _previousIndex
-                                ? value.isFilteredByArtist = false
-                                : value.isFilteredByArtist = true;
-                            _selectedIndex == _previousIndex
-                                ? value.selectedArtist = null
-                                : value.selectedArtist = value.allArtists
-                                    .where((element) =>
-                                        element.numberOfAlbums != '1' ||
-                                        element.numberOfTracks != '1' ||
-                                        element.artistArtPath != null)
-                                    .toList()[index];
-                            _selectedIndex == _previousIndex
-                                ? bgColor = Theme.of(context).primaryColor
-                                : bgColor = Colors.transparent;
-                          });
-                          if (value.isFilteredByArtist) {
-                            value.findArtistAlbums(
-                                artist: value.selectedArtist);
+                  child: Showcase(
+                    key: _three,
+                    description: 'Filter albums by artist.',
+                    child: ListView.builder(
+                      itemBuilder: (context, index) {
+                        return InkWell(
+                          onTap: () {
                             setState(() {
-                              value.displayedAlbums =
-                                  value.selectedArtistAlbums;
+                              _previousIndex = _selectedIndex;
+                              _selectedIndex = index;
+                              _selectedIndex == _previousIndex
+                                  ? value.isFilteredByArtist = false
+                                  : value.isFilteredByArtist = true;
+                              _selectedIndex == _previousIndex
+                                  ? value.selectedArtist = null
+                                  : value.selectedArtist =
+                                      value.allArtists[index];
+                              _selectedIndex == _previousIndex
+                                  ? bgColor = Theme.of(context).primaryColor
+                                  : bgColor = Colors.transparent;
                             });
-                          } else {
-                            setState(() {
-                              value.displayedAlbums = value.allAlbums;
-                              _previousIndex = null;
-                              _selectedIndex = null;
-                            });
-                          }
-                        },
-                        child: ArtistListItem(
-                          artistInfo: value.allArtists
-                              .where((element) =>
-                          element.numberOfAlbums != '1' ||
-                              element.numberOfTracks != '1' ||
-                              element.artistArtPath != null)
-                              .toList()[index],
-                          bgColor:
-                              _selectedIndex != null && _selectedIndex == index
-                                  ? bgColor
-                                  : Theme.of(context).primaryColor,
-                        ),
-                      );
-                    },
-                    itemCount: value.allArtists
-                        .where((element) =>
-                    element.numberOfAlbums != '1' ||
-                        element.numberOfTracks != '1' ||
-                        element.artistArtPath != null)
-                        .toList().length,
-                    scrollDirection: Axis.horizontal,
+                            if (value.isFilteredByArtist) {
+                              value.findArtistAlbums(
+                                  artist: value.selectedArtist);
+                              setState(() {
+                                value.displayedAlbums =
+                                    value.selectedArtistAlbums;
+                              });
+                            } else {
+                              setState(() {
+                                value.displayedAlbums = value.allAlbums;
+                                _previousIndex = null;
+                                _selectedIndex = null;
+                              });
+                            }
+                          },
+                          child: ArtistListItem(
+                            artistInfo: value.allArtists[index],
+                            bgColor: _selectedIndex != null &&
+                                    _selectedIndex == index
+                                ? bgColor
+                                : Theme.of(context).primaryColor,
+                          ),
+                        );
+                      },
+                      itemCount: value.allArtists.length,
+                      scrollDirection: Axis.horizontal,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -218,8 +282,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         alignment: Alignment.bottomCenter,
                         child: Container(
                           height: MediaQuery.of(context).size.height * 0.18,
-                          child: !value.isLoading || value.allSongs.isNotEmpty
-                              ? value.musicPlayer
+                          child: !value.isLoading
+                              ? Showcase(
+                                  key: _two,
+                                  description: 'Here is your Players Controls',
+                                  child: value.musicPlayer)
                               : null,
                         ),
                       ),
@@ -252,6 +319,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ..findAllAlbums()
         ..findAllArtists();
     }
+
+    if (prefsBox?.isOpen ?? false) {
+      if (!prefsBox.containsKey('displayFeatures')) {
+        prefsBox.put('displayFeatures', true);
+        displayFeatures = prefsBox.get('displayFeatures');
+        print('displayFeatures: $displayFeatures');
+        ShowCaseWidget.of(context).startShowCase([_two, _three, _four, _five]);
+      } else {
+        displayFeatures = prefsBox.get('displayFeatures');
+        if (displayFeatures) {
+          ShowCaseWidget.of(context)
+              .startShowCase([_two, _three, _four, _five]);
+        }
+      }
+    }
   }
 
   void initInstaBug() {
@@ -270,6 +352,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       Instabug.start(EnvironmentConfig.IB_TOKEN, [InvocationEvent.none]);
     }
     initInstaBug();
+    if (!prefsBox.containsKey('isFirstRun')) {
+      prefsBox.put('isFirstRun', true);
+    }
     print('home page init state');
     Permission.storage.status.then((value) {
       if (value.isGranted) {
