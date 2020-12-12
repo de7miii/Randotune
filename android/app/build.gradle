@@ -27,18 +27,19 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
-
 def dartEnvironmentVariables = [
-        IB_TOKEN: ''
+        API_KEY: '',
 ];
-if (project.hasProperty('dart-defines')) {
+if(project.hasProperty('dart-defines')) {
     dartEnvironmentVariables = project.property('dart-defines')
-            .split(',')
-            .collectEntries { entry ->
-                def pair = URLDecoder.decode(entry).split('=')
-                [(pair.first()): pair.last()]
-            }
+            .split(',').collectEntries { entry ->
+        def pair = URLDecoder.decode(entry).split('=')
+        [(pair.first()): pair.last()]
+    }
+}else {
+    dartEnvironmentVariables.API_KEY = System.getenv('API_KEY')
 }
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
@@ -61,7 +62,7 @@ android {
         targetSdkVersion 29
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        resValue 'string', 'IB_TOKEN', dartEnvironmentVariables.IB_TOKEN
+//        resValue 'string', 'IB_TOKEN', dartEnvironmentVariables.IB_TOKEN
     }
 
     signingConfigs {
@@ -73,13 +74,15 @@ android {
         }
     }
     buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            shrinkResources false
-            resValue 'string', 'IB_TOKEN', dartEnvironmentVariables.IB_TOKEN
+        if(System.getenv("isAppCenter") == null) {
+            release {
+                signingConfig signingConfigs.release
+                shrinkResources false
+                resValue 'string', 'API_KEY', dartEnvironmentVariables.API_KEY
+            }
         }
         debug {
-            resValue 'string', 'IB_TOKEN', dartEnvironmentVariables.IB_TOKEN
+            resValue 'string', 'API_KEY', dartEnvironmentVariables.API_KEY
         }
     }
 }
@@ -90,4 +93,9 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    // App Center SDKs
+    def appCenterSdkVersion = '3.3.1'
+    implementation "com.microsoft.appcenter:appcenter-analytics:${appCenterSdkVersion}"
+    implementation "com.microsoft.appcenter:appcenter-crashes:${appCenterSdkVersion}"
+    implementation "com.microsoft.appcenter:appcenter-distribute:${appCenterSdkVersion}"
 }

@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:instabug_flutter/CrashReporting.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:random_music_player/ui/home.dart';
 import 'package:random_music_player/utils/album_info.dart';
@@ -23,31 +20,5 @@ void main() async {
   await Hive.openBox('prefs');
   await Hive.openBox('artists');
   print('hive initilized and boxes are open');
-  FlutterError.onError = (FlutterErrorDetails details) {
-    if (isInDebugMode) {
-      FlutterError.dumpErrorToConsole(details);
-    } else {
-      Zone.current.handleUncaughtError(details.exception, details.stack);
-    }
-  };
-  runZonedGuarded<Future<void>>(() async {
-    runApp(MyApp());
-  }, (Object error, StackTrace stackTrace) {
-    _reportError(error, stackTrace);
-  });
-}
-
-bool get isInDebugMode {
-  bool isDebugMode = false;
-  assert(isDebugMode = true);
-  return isDebugMode;
-}
-
-Future<void> _reportError(dynamic error, dynamic stackTrace) async {
-  print("Caught Error: $error");
-  if (isInDebugMode) {
-    print(stackTrace);
-  } else {
-    CrashReporting.reportCrash(error, stackTrace);
-  }
+  runApp(MyApp());
 }

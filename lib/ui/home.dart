@@ -1,26 +1,21 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
-import 'package:instabug_flutter/BugReporting.dart';
-import 'package:instabug_flutter/CrashReporting.dart';
-import 'package:instabug_flutter/Instabug.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:random_music_player/logic/music_finder.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:random_music_player/ui/album_page.dart';
 import 'package:random_music_player/ui/widgets/album_list_item.dart';
 import 'package:random_music_player/ui/widgets/artsit_list_item.dart';
 import 'package:random_music_player/utils/app_theme.dart';
-import 'package:random_music_player/utils/environment_config.dart';
 import 'package:random_music_player/utils/search.dart';
+import 'package:random_music_player/utils/strings.dart';
 import 'package:showcaseview/showcase.dart';
 import 'package:showcaseview/showcase_widget.dart';
-import 'package:random_music_player/utils/strings.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -57,6 +52,10 @@ class MyApp extends StatelessWidget {
                                   height: 5.0,
                                 ),
                                 Text(feature_3),
+                                SizedBox(
+                                  height: 5.0,
+                                ),
+                                Text(feature_4),
                               ],
                             ),
                             actions: [
@@ -160,22 +159,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       });
                     },
                     icon: Icon(Icons.search),
-                  ),
-                ),
-                Showcase(
-                  key: _five,
-                  description: 'Report bugs, or request new features.',
-                  child: FlatButton(
-                    child: Text(
-                      'Report a Bug',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyText2
-                          .copyWith(color: Theme.of(context).accentColor),
-                    ),
-                    onPressed: () {
-                      Instabug.show();
-                    },
                   ),
                 ),
               ],
@@ -325,33 +308,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         prefsBox.put('displayFeatures', true);
         displayFeatures = prefsBox.get('displayFeatures');
         print('displayFeatures: $displayFeatures');
-        ShowCaseWidget.of(context).startShowCase([_two, _three, _four, _five]);
+        ShowCaseWidget.of(context).startShowCase([_two, _three, _four]);
       } else {
         displayFeatures = prefsBox.get('displayFeatures');
         if (displayFeatures) {
-          ShowCaseWidget.of(context)
-              .startShowCase([_two, _three, _four, _five]);
+          ShowCaseWidget.of(context).startShowCase([_two, _three, _four]);
         }
       }
     }
-  }
-
-  void initInstaBug() {
-    Instabug.setWelcomeMessageMode(WelcomeMessageMode.disabled);
-    BugReporting.setEnabled(true);
-    BugReporting.setReportTypes([ReportType.bug, ReportType.feedback]);
-    BugReporting.setInvocationOptions([InvocationOption.emailFieldHidden]);
-    CrashReporting.setEnabled(true);
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (Platform.isIOS) {
-      Instabug.start(EnvironmentConfig.IB_TOKEN, [InvocationEvent.none]);
-    }
-    initInstaBug();
     if (!prefsBox.containsKey('isFirstRun')) {
       prefsBox.put('isFirstRun', true);
     }
@@ -478,7 +448,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeDependencies();
     print('home page did change dependencies');
     MusicFinder musicModel = Provider.of<MusicFinder>(context, listen: false);
-    Instabug.setPrimaryColor(Theme.of(context).primaryColor);
     if (AudioService.connected) {
       if (AudioService.running) {
         if (AudioService.playbackState.playing) {
