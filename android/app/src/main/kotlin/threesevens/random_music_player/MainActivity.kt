@@ -12,9 +12,11 @@ import com.microsoft.appcenter.distribute.UpdateTrack
 class MainActivity: FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        var API_KEY: String = getString(R.string.API_KEY);
+        var API_KEY: String = "";
         if(System.getenv("isAppCenter") != null){
             API_KEY = System.getenv("API_KEY").toString()
+        }else {
+            API_KEY = getString(R.string.API_KEY).toString()
         }
         Distribute.setUpdateTrack(UpdateTrack.PUBLIC);
         AppCenter.start(application, API_KEY,
