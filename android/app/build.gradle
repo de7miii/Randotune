@@ -74,13 +74,13 @@ android {
         }
     }
     buildTypes {
-        if(System.getenv("isAppCenter") == null) {
             release {
-                signingConfig signingConfigs.release
+                if(System.getenv("isAppCenter") == null) {
+                    signingConfig signingConfigs.release
+                }
                 shrinkResources false
                 resValue 'string', 'API_KEY', dartEnvironmentVariables.API_KEY
             }
-        }
         debug {
             resValue 'string', 'API_KEY', dartEnvironmentVariables.API_KEY
         }
