@@ -19,4 +19,4 @@ flutter pub get
 flutter build apk --release --dart-define=API_KEY=$API_KEY
 
 # copy the APK where AppCenter will find it
-mkdir -p android/app/build/outputs/apk/; mv build/app/outputs/apk/release/app-release.apk $_
+mkdir -p android/app/build/outputs/apk/; mv build/app/outputs/flutter-apk/app-release.apk $_
